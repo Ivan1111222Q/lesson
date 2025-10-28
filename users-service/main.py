@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Depends, status
+from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, EmailStr
 from typing import Optional, Dict, Any
@@ -24,11 +25,26 @@ from metrics import (
 load_dotenv()
 
 app = FastAPI(title="Users Service")
+
+# CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 app.add_middleware(TraceIDMiddleware)
 security = HTTPBearer()
 
 # Initialize Prometheus metrics
 Instrumentator().instrument(app).expose(app)
+
+# Initialize test user on startup
+@app.on_event("startup")
+async def startup_event():
+    init_test_user()
 
 # Configuration
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
@@ -79,6 +95,55 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
         )
     user_id = tokens_db[token]
     return users_db[user_id]
+
+
+def init_test_user():
+    """Initialize test user from environment variables if all are set"""
+    global user_id_counter
+
+    test_email = os.getenv("TEST_USER_EMAIL")
+    test_password = os.getenv("TEST_USER_PASSWORD")
+    test_name = os.getenv("TEST_USER_NAME")
+
+    # Only create test user if all three variables are set
+    if not all([test_email, test_password, test_name]):
+        logger.info("Test user not configured (one or more env variables missing)")
+        return
+
+    # Check if test user already exists
+    for existing_user in users_db.values():
+        if existing_user["email"] == test_email:
+            logger.info(
+                "Test user already exists",
+                extra={"email": test_email}
+            )
+            return
+
+    # Create test user
+    user_id = user_id_counter
+    password_hash = hash_password(test_password)
+
+    users_db[user_id] = {
+        "id": user_id,
+        "email": test_email,
+        "name": test_name,
+        "password_hash": password_hash
+    }
+
+    user_id_counter += 1
+
+    # Update Prometheus metrics
+    users_registered_total.inc()
+    active_users_gauge.set(len(users_db))
+
+    logger.info(
+        "Test user created successfully",
+        extra={
+            "user_id": user_id,
+            "email": test_email,
+            "user_name": test_name,
+        }
+    )
 
 
 @app.get("/")
