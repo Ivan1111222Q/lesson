@@ -42,30 +42,50 @@
 - Products Service (проверка наличия, обновление stock)
 - Users Service (валидация пользователей)
 
+### 4. Reviews Service (порт 8004)
+**Отвечает за:**
+- Создание отзывов с рейтингами (1-5 звезд)
+- Загрузка и хранение фотографий к отзывам (до 5 фото)
+- Верификация покупок через Orders Service
+- Статистика рейтингов товаров
+- Фильтрация отзывов по товарам/пользователям
+- Пагинация и сортировка отзывов
+
+**Зависимости:**
+- Users Service (валидация пользователей)
+- Products Service (валидация товаров)
+- Orders Service (верификация покупок)
+
+**Особенности:**
+- Хранение фотографий внутри контейнера с Docker volume
+- Поддержка multipart/form-data для загрузки файлов
+- Валидация изображений (формат, размер)
+- Автоматический расчет средних рейтингов
+
 ### Межсервисная коммуникация
 
 Все сервисы общаются друг с другом через HTTP REST API:
 
 ```
-┌─────────────────┐
-│  Users Service  │
-│    :8003        │
-└────────┬────────┘
-         │
-         │ GET /orders?user_id={id}
-         │ GET /orders/{id}
-         ▼
+┌─────────────────┐                              ┌──────────────────┐
+│  Users Service  │                              │ Reviews Service  │
+│    :8003        │◄──────────────────────────────│     :8004        │
+└────────┬────────┘  GET /users/{id}            └────────┬─────────┘
+         │                                                │
+         │ GET /orders?user_id={id}                      │ GET /orders/{id}
+         │ GET /orders/{id}                              │ Verify purchase
+         ▼                                               ▼
 ┌─────────────────┐      GET /products/{id}      ┌──────────────────┐
 │ Orders Service  │◄────────────────────────────►│ Products Service │
-│    :8002        │  PATCH /products/{id}/stock  │     :8001        │
-└─────────────────┘                               └──────────────────┘
-         ▲
-         │ GET /orders (for stats)
-         │
-┌────────┴────────┐
-│ Products Service│
-│    :8001        │
-└─────────────────┘
+│    :8002        │  PATCH /products/{id}/stock  │     :8001        │◄───┐
+└─────────────────┘                               └──────────────────┘    │
+         ▲                                                ▲                │
+         │ GET /orders (for stats)                       │                │
+         │                                               │ GET /products/{id}
+┌────────┴────────┐                              ┌───────┴────────┐       │
+│ Products Service│                              │ Reviews Service│───────┘
+│    :8001        │                              │     :8004      │
+└─────────────────┘                              └────────────────┘
 ```
 
 **Особенности реализации:**
@@ -1188,6 +1208,90 @@ curl -X POST http://localhost:8002/orders/1/cancel
 
 Товары автоматически вернутся на склад.
 
+### 8. Создание отзыва с фотографиями
+
+```bash
+curl -X POST http://localhost:8004/reviews \
+  -F "user_id=1" \
+  -F "product_id=1" \
+  -F "order_id=1" \
+  -F "rating=5" \
+  -F "text=Отличный товар! Рекомендую!" \
+  -F "photos=@photo1.jpg" \
+  -F "photos=@photo2.jpg"
+```
+
+Ответ:
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "product_id": 1,
+  "order_id": 1,
+  "rating": 5,
+  "text": "Отличный товар! Рекомендую!",
+  "photos": [
+    "uuid-1.jpg",
+    "uuid-2.jpg"
+  ],
+  "is_verified_purchase": true,
+  "created_at": "2025-10-28T19:00:00"
+}
+```
+
+### 9. Получение рейтинга товара
+
+```bash
+curl http://localhost:8004/products/1/rating
+```
+
+Ответ:
+```json
+{
+  "product_id": 1,
+  "average_rating": 4.5,
+  "total_reviews": 10,
+  "rating_distribution": {
+    "5": 6,
+    "4": 2,
+    "3": 1,
+    "2": 1,
+    "1": 0
+  },
+  "verified_purchases": 8,
+  "reviews_with_photos": 5
+}
+```
+
+### 10. Получение фотографии из отзыва
+
+```bash
+curl http://localhost:8004/reviews/1/photos/uuid-1.jpg --output photo.jpg
+```
+
+### 11. Фильтрация отзывов по товару
+
+```bash
+curl "http://localhost:8004/reviews?product_id=1&sort_by=rating&limit=10"
+```
+
+Ответ:
+```json
+[
+  {
+    "id": 3,
+    "user_id": 2,
+    "product_id": 1,
+    "order_id": 2,
+    "rating": 5,
+    "text": "Отличный товар!",
+    "photos": ["uuid-3.jpg"],
+    "is_verified_purchase": true,
+    "created_at": "2025-10-28T20:00:00"
+  }
+]
+```
+
 ## Технологии
 
 - **FastAPI** - современный веб-фреймворк для Python
@@ -1197,6 +1301,9 @@ curl -X POST http://localhost:8002/orders/1/cancel
 - **Docker & Docker Compose** - контейнеризация
 - **Prometheus** - мониторинг и сбор метрик
 - **python-dotenv** - управление переменными окружения
+- **Pillow** - обработка и валидация изображений
+- **aiofiles** - асинхронная работа с файлами
+- **python-multipart** - обработка multipart/form-data загрузок
 
 ## Особенности
 
@@ -1264,6 +1371,14 @@ curl -X POST http://localhost:8002/orders/1/cancel
 - `active_users_total` - текущее количество активных пользователей
 - `http_client_request_duration_seconds` - latency межсервисных вызовов
 
+**Reviews Service (http://localhost:8004/metrics):**
+- `reviews_created_total` - количество созданных отзывов
+- `photos_uploaded_total` - количество загруженных фотографий
+- `photos_storage_size_bytes` - размер хранилища фотографий в байтах
+- `average_product_rating` - средний рейтинг по товарам
+- `verified_purchases_total` - количество верифицированных покупок
+- `http_client_request_duration_seconds` - latency межсервисных вызовов
+
 Также доступны автоматические HTTP метрики от prometheus-fastapi-instrumentator:
 - Latency запросов
 - Количество запросов по эндпоинтам
@@ -1301,6 +1416,17 @@ LOG_FORMAT=json
 METRICS_ENABLED=true
 ```
 
+**Reviews Service:**
+```env
+USERS_SERVICE_URL=http://users-service:8003
+PRODUCTS_SERVICE_URL=http://products-service:8001
+ORDERS_SERVICE_URL=http://orders-service:8002
+PORT=8004
+LOG_LEVEL=INFO
+LOG_FORMAT=json
+METRICS_ENABLED=true
+```
+
 ## Примечания
 
 Данная реализация использует in-memory хранилище для демонстрации. В продакшене следует использовать реальные базы данных (PostgreSQL, MongoDB и т.д.).
@@ -1312,3 +1438,4 @@ METRICS_ENABLED=true
 - Users: http://localhost:8003/docs
 - Products: http://localhost:8001/docs
 - Orders: http://localhost:8002/docs
+- Reviews: http://localhost:8004/docs
