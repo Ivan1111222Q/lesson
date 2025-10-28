@@ -3,11 +3,16 @@ from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
 import httpx
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Products Service")
 
 # Configuration
-ORDERS_SERVICE_URL = "http://orders-service:8002"
+ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
+PORT = int(os.getenv("PORT", "8001"))
 
 # In-memory database for demo
 products_db = {}
@@ -272,4 +277,4 @@ async def get_product_stats(product_id: int):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

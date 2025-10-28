@@ -4,12 +4,17 @@ from typing import List, Optional
 from datetime import datetime
 import uvicorn
 import httpx
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Orders Service")
 
 # Configuration
-PRODUCTS_SERVICE_URL = "http://products-service:8001"
-USERS_SERVICE_URL = "http://users-service:8003"
+PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8001")
+USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://users-service:8003")
+PORT = int(os.getenv("PORT", "8002"))
 
 # In-memory database for demo
 orders_db = {}
@@ -293,4 +298,4 @@ async def get_revenue_stats():
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8002)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)

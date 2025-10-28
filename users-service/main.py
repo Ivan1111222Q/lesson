@@ -6,12 +6,17 @@ import uvicorn
 import hashlib
 import secrets
 import httpx
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 app = FastAPI(title="Users Service")
 security = HTTPBearer()
 
 # Configuration
-ORDERS_SERVICE_URL = "http://orders-service:8002"
+ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
+PORT = int(os.getenv("PORT", "8003"))
 
 # In-memory database for demo
 users_db = {}
@@ -280,4 +285,4 @@ async def get_user_stats(user_id: int):
 
 
 if __name__ == "__main__":
-    uvicorn.run(app, host="0.0.0.0", port=8003)
+    uvicorn.run(app, host="0.0.0.0", port=PORT)
