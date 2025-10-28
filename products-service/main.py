@@ -7,11 +7,23 @@ import os
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+from metrics import (
+    products_created_total,
+    products_deleted_total,
+    products_stock_gauge,
+    product_price_histogram,
+    stock_updates_total,
+    HTTPClientMetrics
+)
 
 load_dotenv()
 
 app = FastAPI(title="Products Service")
 app.add_middleware(TraceIDMiddleware)
+
+# Initialize Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Configuration
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
@@ -45,6 +57,11 @@ async def create_product(product: Product):
     product_id = product_id_counter
     products_db[product_id] = product.model_dump()
     product_id_counter += 1
+
+    # Update Prometheus metrics
+    products_created_total.labels(category=product.category).inc()
+    product_price_histogram.labels(category=product.category).observe(product.price)
+    products_stock_gauge.inc(product.stock)
 
     logger.info(
         "Product created",
@@ -102,11 +119,14 @@ async def get_popular_products():
                 }
             )
 
-            response = await client.get(
-                f"{ORDERS_SERVICE_URL}/orders",
-                headers=headers,
-                timeout=5.0
-            )
+            with HTTPClientMetrics("orders-service", "GET") as metrics:
+                response = await client.get(
+                    f"{ORDERS_SERVICE_URL}/orders",
+                    headers=headers,
+                    timeout=5.0
+                )
+                metrics.set_status(response.status_code)
+
             if response.status_code != 200:
                 logger.error(
                     "Failed to fetch orders from orders-service",
@@ -226,10 +246,12 @@ async def get_low_stock_products(threshold: int = 5):
     # Enrich with sales data from orders-service to prioritize by popularity
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(
-                f"{ORDERS_SERVICE_URL}/orders",
-                timeout=5.0
-            )
+            with HTTPClientMetrics("orders-service", "GET") as metrics:
+                response = await client.get(
+                    f"{ORDERS_SERVICE_URL}/orders",
+                    timeout=5.0
+                )
+                metrics.set_status(response.status_code)
 
             if response.status_code == 200:
                 orders = response.json()
@@ -322,7 +344,15 @@ async def delete_product(product_id: int):
         logger.warning("Delete failed - product not found", extra={"product_id": product_id})
         raise HTTPException(status_code=404, detail="Product not found")
 
-    product_name = products_db[product_id]["name"]
+    product = products_db[product_id]
+    product_name = product["name"]
+    product_category = product["category"]
+    product_stock = product["stock"]
+
+    # Update Prometheus metrics
+    products_deleted_total.labels(category=product_category).inc()
+    products_stock_gauge.dec(product_stock)
+
     del products_db[product_id]
 
     logger.info(
@@ -362,6 +392,14 @@ async def update_stock(product_id: int, quantity: int):
 
     products_db[product_id]["stock"] = new_stock
 
+    # Update Prometheus metrics
+    operation = "increase" if quantity > 0 else "decrease"
+    stock_updates_total.labels(
+        product_id=str(product_id),
+        operation=operation
+    ).inc()
+    products_stock_gauge.inc(quantity)
+
     logger.info(
         "Stock updated",
         extra={
@@ -391,10 +429,13 @@ async def get_product_stats(product_id: int):
             trace_id = get_trace_id()
             headers = {"X-Trace-ID": trace_id} if trace_id else {}
 
-            response = await client.get(
-                f"{ORDERS_SERVICE_URL}/orders",
-                timeout=5.0
-            )
+            with HTTPClientMetrics("orders-service", "GET") as metrics:
+                response = await client.get(
+                    f"{ORDERS_SERVICE_URL}/orders",
+                    timeout=5.0
+                )
+                metrics.set_status(response.status_code)
+
             if response.status_code != 200:
                 logger.error(
                     "Failed to fetch orders for product stats",

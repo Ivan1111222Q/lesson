@@ -8,11 +8,24 @@ import os
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+from metrics import (
+    orders_created_total,
+    orders_cancelled_total,
+    order_items_total,
+    order_value_histogram,
+    revenue_gauge,
+    order_status_changes_total,
+    HTTPClientMetrics
+)
 
 load_dotenv()
 
 app = FastAPI(title="Orders Service")
 app.add_middleware(TraceIDMiddleware)
+
+# Initialize Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Configuration
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8001")
@@ -73,11 +86,14 @@ async def create_order(order: Order):
                 }
             )
 
-            user_response = await client.get(
-                f"{USERS_SERVICE_URL}/users/{order.user_id}",
-                headers=headers,
-                timeout=5.0
-            )
+            with HTTPClientMetrics("users-service", "GET") as metrics:
+                user_response = await client.get(
+                    f"{USERS_SERVICE_URL}/users/{order.user_id}",
+                    headers=headers,
+                    timeout=5.0
+                )
+                metrics.set_status(user_response.status_code)
+
             if user_response.status_code == 404:
                 logger.warning(
                     "User not found",
@@ -120,11 +136,14 @@ async def create_order(order: Order):
                     }
                 )
 
-                response = await client.get(
-                    f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}",
-                    headers=headers,
-                    timeout=5.0
-                )
+                with HTTPClientMetrics("products-service", "GET") as metrics:
+                    response = await client.get(
+                        f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}",
+                        headers=headers,
+                        timeout=5.0
+                    )
+                    metrics.set_status(response.status_code)
+
                 if response.status_code == 404:
                     logger.warning(
                         "Product not found",
@@ -159,12 +178,14 @@ async def create_order(order: Order):
                     }
                 )
 
-                await client.patch(
-                    f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}/stock",
-                    params={"quantity": -item.quantity},
-                    headers=headers,
-                    timeout=5.0
-                )
+                with HTTPClientMetrics("products-service", "PATCH") as metrics:
+                    stock_response = await client.patch(
+                        f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}/stock",
+                        params={"quantity": -item.quantity},
+                        headers=headers,
+                        timeout=5.0
+                    )
+                    metrics.set_status(stock_response.status_code)
 
                 total += item.price * item.quantity
 
@@ -189,6 +210,12 @@ async def create_order(order: Order):
     order_data["total"] = total
     orders_db[order_id] = order_data
     order_id_counter += 1
+
+    # Update Prometheus metrics
+    orders_created_total.labels(status=order.status).inc()
+    order_value_histogram.observe(total)
+    revenue_gauge.inc(total)
+    order_items_total.inc(len(order.items))
 
     logger.info(
         "Order created successfully",
@@ -268,6 +295,12 @@ async def update_order_status(order_id: int, status: str):
     old_status = orders_db[order_id]["status"]
     orders_db[order_id]["status"] = status
 
+    # Update Prometheus metrics
+    order_status_changes_total.labels(
+        from_status=old_status,
+        to_status=status
+    ).inc()
+
     logger.info(
         "Order status updated",
         extra={
@@ -328,12 +361,14 @@ async def cancel_order(order_id: int):
                 )
 
                 # Return stock by adding back the quantity
-                response = await client.patch(
-                    f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}/stock",
-                    params={"quantity": item["quantity"]},  # Positive to add back
-                    headers=headers,
-                    timeout=5.0
-                )
+                with HTTPClientMetrics("products-service", "PATCH") as metrics:
+                    response = await client.patch(
+                        f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}/stock",
+                        params={"quantity": item["quantity"]},  # Positive to add back
+                        headers=headers,
+                        timeout=5.0
+                    )
+                    metrics.set_status(response.status_code)
 
                 if response.status_code != 200:
                     raise HTTPException(
@@ -357,7 +392,17 @@ async def cancel_order(order_id: int):
                 )
 
     # Update order status to cancelled
+    old_status = orders_db[order_id]["status"]
     orders_db[order_id]["status"] = "cancelled"
+
+    # Update Prometheus metrics
+    orders_cancelled_total.inc()
+    order_status_changes_total.labels(
+        from_status=old_status,
+        to_status="cancelled"
+    ).inc()
+    # Decrease revenue by order total
+    revenue_gauge.dec(order["total"])
 
     logger.info(
         "Order cancelled successfully",
@@ -393,11 +438,14 @@ async def get_order_details(order_id: int):
 
         for item in order["items"]:
             try:
-                product_response = await client.get(
-                    f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}",
-                    headers=headers,
-                    timeout=5.0
-                )
+                with HTTPClientMetrics("products-service", "GET") as metrics:
+                    product_response = await client.get(
+                        f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}",
+                        headers=headers,
+                        timeout=5.0
+                    )
+                    metrics.set_status(product_response.status_code)
+
                 if product_response.status_code == 200:
                     product = product_response.json()
                     enriched_items.append({

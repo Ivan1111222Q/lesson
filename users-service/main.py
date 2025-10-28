@@ -10,12 +10,23 @@ import os
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
+from prometheus_fastapi_instrumentator import Instrumentator
+from metrics import (
+    users_registered_total,
+    user_logins_total,
+    user_logouts_total,
+    active_users_gauge,
+    HTTPClientMetrics
+)
 
 load_dotenv()
 
 app = FastAPI(title="Users Service")
 app.add_middleware(TraceIDMiddleware)
 security = HTTPBearer()
+
+# Initialize Prometheus metrics
+Instrumentator().instrument(app).expose(app)
 
 # Configuration
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
@@ -105,6 +116,10 @@ async def register(user: UserRegister):
     tokens_db[token] = user_id
     user_id_counter += 1
 
+    # Update Prometheus metrics
+    users_registered_total.inc()
+    active_users_gauge.set(len(users_db))
+
     logger.info(
         "User registered successfully",
         extra={
@@ -136,6 +151,9 @@ async def login(credentials: UserLogin):
             token = generate_token()
             tokens_db[token] = user_id
 
+            # Update Prometheus metrics
+            user_logins_total.labels(result="success").inc()
+
             logger.info(
                 "User logged in successfully",
                 extra={
@@ -152,6 +170,9 @@ async def login(credentials: UserLogin):
                     "name": user["name"]
                 }
             }
+
+    # Update Prometheus metrics for failed login
+    user_logins_total.labels(result="failed").inc()
 
     logger.warning("Login failed - invalid credentials", extra={"email": credentials.email})
 
@@ -175,6 +196,8 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     if token in tokens_db:
         del tokens_db[token]
+        # Update Prometheus metrics
+        user_logouts_total.inc()
     return {"message": "Logged out successfully"}
 
 
@@ -226,12 +249,15 @@ async def get_user_orders(user_id: int):
                 }
             )
 
-            response = await client.get(
-                f"{ORDERS_SERVICE_URL}/orders",
-                params={"user_id": user_id},
-                headers=headers,
-                timeout=5.0
-            )
+            with HTTPClientMetrics("orders-service", "GET") as metrics:
+                response = await client.get(
+                    f"{ORDERS_SERVICE_URL}/orders",
+                    params={"user_id": user_id},
+                    headers=headers,
+                    timeout=5.0
+                )
+                metrics.set_status(response.status_code)
+
             if response.status_code == 200:
                 orders = response.json()
                 user = users_db[user_id]
@@ -303,12 +329,15 @@ async def get_user_stats(user_id: int):
                 }
             )
 
-            response = await client.get(
-                f"{ORDERS_SERVICE_URL}/orders",
-                params={"user_id": user_id},
-                headers=headers,
-                timeout=5.0
-            )
+            with HTTPClientMetrics("orders-service", "GET") as metrics:
+                response = await client.get(
+                    f"{ORDERS_SERVICE_URL}/orders",
+                    params={"user_id": user_id},
+                    headers=headers,
+                    timeout=5.0
+                )
+                metrics.set_status(response.status_code)
+
             if response.status_code != 200:
                 logger.error(
                     "Failed to fetch orders for user stats",
