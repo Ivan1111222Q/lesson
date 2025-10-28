@@ -6,10 +6,13 @@ import uvicorn
 import httpx
 import os
 from dotenv import load_dotenv
+from logger import logger, get_trace_id
+from middleware import TraceIDMiddleware
 
 load_dotenv()
 
 app = FastAPI(title="Orders Service")
+app.add_middleware(TraceIDMiddleware)
 
 # Configuration
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8001")
@@ -48,19 +51,54 @@ async def root():
 async def create_order(order: Order):
     global order_id_counter
 
+    logger.info(
+        "Creating order",
+        extra={
+            "user_id": order.user_id,
+            "items_count": len(order.items),
+        }
+    )
+
     # Verify user exists
     async with httpx.AsyncClient() as client:
         try:
+            trace_id = get_trace_id()
+            headers = {"X-Trace-ID": trace_id} if trace_id else {}
+
+            logger.info(
+                "Verifying user exists",
+                extra={
+                    "user_id": order.user_id,
+                    "target_service": "users-service",
+                }
+            )
+
             user_response = await client.get(
                 f"{USERS_SERVICE_URL}/users/{order.user_id}",
+                headers=headers,
                 timeout=5.0
             )
             if user_response.status_code == 404:
+                logger.warning(
+                    "User not found",
+                    extra={"user_id": order.user_id}
+                )
                 raise HTTPException(
                     status_code=404,
                     detail=f"User {order.user_id} not found"
                 )
-        except httpx.RequestError:
+
+            logger.info("User verified", extra={"user_id": order.user_id})
+
+        except httpx.RequestError as e:
+            logger.error(
+                "Users service unavailable",
+                extra={
+                    "error": str(e),
+                    "target_service": "users-service",
+                },
+                exc_info=True
+            )
             raise HTTPException(
                 status_code=503,
                 detail="Users service unavailable"
@@ -69,13 +107,29 @@ async def create_order(order: Order):
     # Verify products and check stock
     total = 0.0
     async with httpx.AsyncClient() as client:
+        trace_id = get_trace_id()
+        headers = {"X-Trace-ID": trace_id} if trace_id else {}
+
         for item in order.items:
             try:
+                logger.info(
+                    "Verifying product and stock",
+                    extra={
+                        "product_id": item.product_id,
+                        "quantity": item.quantity,
+                    }
+                )
+
                 response = await client.get(
                     f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}",
+                    headers=headers,
                     timeout=5.0
                 )
                 if response.status_code == 404:
+                    logger.warning(
+                        "Product not found",
+                        extra={"product_id": item.product_id}
+                    )
                     raise HTTPException(
                         status_code=404,
                         detail=f"Product {item.product_id} not found"
@@ -83,21 +137,47 @@ async def create_order(order: Order):
                 product = response.json()
 
                 if product["stock"] < item.quantity:
+                    logger.warning(
+                        "Insufficient stock",
+                        extra={
+                            "product_id": item.product_id,
+                            "requested": item.quantity,
+                            "available": product["stock"],
+                        }
+                    )
                     raise HTTPException(
                         status_code=400,
                         detail=f"Insufficient stock for product {item.product_id}"
                     )
 
                 # Update stock
+                logger.info(
+                    "Updating product stock",
+                    extra={
+                        "product_id": item.product_id,
+                        "quantity_change": -item.quantity,
+                    }
+                )
+
                 await client.patch(
                     f"{PRODUCTS_SERVICE_URL}/products/{item.product_id}/stock",
                     params={"quantity": -item.quantity},
+                    headers=headers,
                     timeout=5.0
                 )
 
                 total += item.price * item.quantity
 
-            except httpx.RequestError:
+            except httpx.RequestError as e:
+                logger.error(
+                    "Products service unavailable",
+                    extra={
+                        "error": str(e),
+                        "target_service": "products-service",
+                        "product_id": item.product_id,
+                    },
+                    exc_info=True
+                )
                 raise HTTPException(
                     status_code=503,
                     detail="Products service unavailable"
@@ -110,47 +190,122 @@ async def create_order(order: Order):
     orders_db[order_id] = order_data
     order_id_counter += 1
 
+    logger.info(
+        "Order created successfully",
+        extra={
+            "order_id": order_id,
+            "user_id": order.user_id,
+            "total": total,
+            "items_count": len(order.items),
+        }
+    )
+
     return {"id": order_id, **orders_db[order_id]}
 
 
 @app.get("/orders", response_model=List[OrderResponse])
 async def get_orders(user_id: Optional[int] = None):
+    logger.info(
+        "Fetching orders",
+        extra={"user_id_filter": user_id if user_id else "all"}
+    )
+
     orders = []
     for order_id, order in orders_db.items():
         if user_id is None or order.get("user_id") == user_id:
             orders.append({"id": order_id, **order})
+
+    logger.info(
+        "Orders retrieved",
+        extra={
+            "orders_count": len(orders),
+            "user_id_filter": user_id if user_id else "all",
+        }
+    )
+
     return orders
 
 
 @app.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(order_id: int):
+    logger.info("Fetching order", extra={"order_id": order_id})
+
     if order_id not in orders_db:
+        logger.warning("Order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
+
+    logger.info(
+        "Order retrieved",
+        extra={
+            "order_id": order_id,
+            "user_id": orders_db[order_id]["user_id"],
+            "status": orders_db[order_id]["status"],
+        }
+    )
+
     return {"id": order_id, **orders_db[order_id]}
 
 
 @app.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: int, status: str):
+    logger.info(
+        "Updating order status",
+        extra={"order_id": order_id, "new_status": status}
+    )
+
     if order_id not in orders_db:
+        logger.warning("Status update failed - order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
 
     valid_statuses = ["pending", "processing", "shipped", "delivered", "cancelled"]
     if status not in valid_statuses:
+        logger.warning(
+            "Status update failed - invalid status",
+            extra={"order_id": order_id, "attempted_status": status}
+        )
         raise HTTPException(status_code=400, detail="Invalid status")
 
+    old_status = orders_db[order_id]["status"]
     orders_db[order_id]["status"] = status
+
+    logger.info(
+        "Order status updated",
+        extra={
+            "order_id": order_id,
+            "old_status": old_status,
+            "new_status": status,
+        }
+    )
+
     return {"id": order_id, "status": status}
 
 
 @app.post("/orders/{order_id}/cancel")
 async def cancel_order(order_id: int):
     if order_id not in orders_db:
+        logger.warning("Cancel order failed - order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = orders_db[order_id]
 
+    logger.info(
+        "Cancelling order",
+        extra={
+            "order_id": order_id,
+            "current_status": order["status"],
+            "items_count": len(order["items"]),
+        }
+    )
+
     # Check if order can be cancelled
     if order["status"] not in ["pending", "processing"]:
+        logger.warning(
+            "Cancel order failed - invalid status",
+            extra={
+                "order_id": order_id,
+                "status": order["status"],
+            }
+        )
         raise HTTPException(
             status_code=400,
             detail=f"Cannot cancel order with status '{order['status']}'. Only pending or processing orders can be cancelled."
@@ -158,12 +313,25 @@ async def cancel_order(order_id: int):
 
     # Return products to stock
     async with httpx.AsyncClient() as client:
+        trace_id = get_trace_id()
+        headers = {"X-Trace-ID": trace_id} if trace_id else {}
+
         for item in order["items"]:
             try:
+                logger.info(
+                    "Returning stock to product",
+                    extra={
+                        "order_id": order_id,
+                        "product_id": item["product_id"],
+                        "quantity": item["quantity"],
+                    }
+                )
+
                 # Return stock by adding back the quantity
                 response = await client.patch(
                     f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}/stock",
                     params={"quantity": item["quantity"]},  # Positive to add back
+                    headers=headers,
                     timeout=5.0
                 )
 
@@ -173,7 +341,16 @@ async def cancel_order(order_id: int):
                         detail=f"Failed to return stock for product {item['product_id']}"
                     )
 
-            except httpx.RequestError:
+            except httpx.RequestError as e:
+                logger.error(
+                    "Products service unavailable during cancel",
+                    extra={
+                        "error": str(e),
+                        "order_id": order_id,
+                        "product_id": item["product_id"],
+                    },
+                    exc_info=True
+                )
                 raise HTTPException(
                     status_code=503,
                     detail="Products service unavailable"
@@ -181,6 +358,14 @@ async def cancel_order(order_id: int):
 
     # Update order status to cancelled
     orders_db[order_id]["status"] = "cancelled"
+
+    logger.info(
+        "Order cancelled successfully",
+        extra={
+            "order_id": order_id,
+            "returned_items": len(order["items"]),
+        }
+    )
 
     return {
         "id": order_id,
@@ -192,7 +377,10 @@ async def cancel_order(order_id: int):
 
 @app.get("/orders/{order_id}/details")
 async def get_order_details(order_id: int):
+    logger.info("Fetching order details", extra={"order_id": order_id})
+
     if order_id not in orders_db:
+        logger.warning("Order details failed - order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
 
     order = orders_db[order_id]
@@ -200,10 +388,14 @@ async def get_order_details(order_id: int):
     # Enrich order items with product details
     enriched_items = []
     async with httpx.AsyncClient() as client:
+        trace_id = get_trace_id()
+        headers = {"X-Trace-ID": trace_id} if trace_id else {}
+
         for item in order["items"]:
             try:
                 product_response = await client.get(
                     f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}",
+                    headers=headers,
                     timeout=5.0
                 )
                 if product_response.status_code == 200:
@@ -243,6 +435,14 @@ async def get_order_details(order_id: int):
                     "subtotal": item["price"] * item["quantity"]
                 })
 
+    logger.info(
+        "Order details retrieved",
+        extra={
+            "order_id": order_id,
+            "enriched_items_count": len(enriched_items),
+        }
+    )
+
     return {
         "id": order_id,
         "user_id": order["user_id"],
@@ -255,7 +455,10 @@ async def get_order_details(order_id: int):
 
 @app.get("/orders/stats/revenue")
 async def get_revenue_stats():
+    logger.info("Fetching revenue statistics")
+
     if not orders_db:
+        logger.info("Revenue statistics - no orders found")
         return {
             "total_orders": 0,
             "total_revenue": 0.0,
@@ -285,6 +488,16 @@ async def get_revenue_stats():
 
     # Get completed orders count (delivered)
     completed_orders = orders_by_status.get("delivered", 0)
+
+    logger.info(
+        "Revenue statistics calculated",
+        extra={
+            "total_orders": total_orders,
+            "completed_orders": completed_orders,
+            "cancelled_orders": orders_by_status.get("cancelled", 0),
+            "total_revenue": round(total_revenue, 2),
+        }
+    )
 
     return {
         "total_orders": total_orders,
