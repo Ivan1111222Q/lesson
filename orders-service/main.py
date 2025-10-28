@@ -137,6 +137,54 @@ async def update_order_status(order_id: int, status: str):
     return {"id": order_id, "status": status}
 
 
+@app.post("/orders/{order_id}/cancel")
+async def cancel_order(order_id: int):
+    if order_id not in orders_db:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = orders_db[order_id]
+
+    # Check if order can be cancelled
+    if order["status"] not in ["pending", "processing"]:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Cannot cancel order with status '{order['status']}'. Only pending or processing orders can be cancelled."
+        )
+
+    # Return products to stock
+    async with httpx.AsyncClient() as client:
+        for item in order["items"]:
+            try:
+                # Return stock by adding back the quantity
+                response = await client.patch(
+                    f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}/stock",
+                    params={"quantity": item["quantity"]},  # Positive to add back
+                    timeout=5.0
+                )
+
+                if response.status_code != 200:
+                    raise HTTPException(
+                        status_code=503,
+                        detail=f"Failed to return stock for product {item['product_id']}"
+                    )
+
+            except httpx.RequestError:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Products service unavailable"
+                )
+
+    # Update order status to cancelled
+    orders_db[order_id]["status"] = "cancelled"
+
+    return {
+        "id": order_id,
+        "status": "cancelled",
+        "message": "Order cancelled successfully. Stock returned to inventory.",
+        "returned_items": len(order["items"])
+    }
+
+
 @app.get("/orders/{order_id}/details")
 async def get_order_details(order_id: int):
     if order_id not in orders_db:
@@ -197,6 +245,50 @@ async def get_order_details(order_id: int):
         "status": order["status"],
         "total": order["total"],
         "created_at": order["created_at"]
+    }
+
+
+@app.get("/orders/stats/revenue")
+async def get_revenue_stats():
+    if not orders_db:
+        return {
+            "total_orders": 0,
+            "total_revenue": 0.0,
+            "average_order_value": 0.0,
+            "orders_by_status": {},
+            "revenue_by_status": {}
+        }
+
+    total_revenue = 0.0
+    total_orders = len(orders_db)
+    orders_by_status = {}
+    revenue_by_status = {}
+
+    for order in orders_db.values():
+        status = order["status"]
+        order_total = order["total"]
+
+        # Count orders by status
+        orders_by_status[status] = orders_by_status.get(status, 0) + 1
+
+        # Sum revenue by status (only count non-cancelled orders for revenue)
+        if status != "cancelled":
+            total_revenue += order_total
+            revenue_by_status[status] = revenue_by_status.get(status, 0.0) + order_total
+
+    average_order_value = total_revenue / total_orders if total_orders > 0 else 0.0
+
+    # Get completed orders count (delivered)
+    completed_orders = orders_by_status.get("delivered", 0)
+
+    return {
+        "total_orders": total_orders,
+        "completed_orders": completed_orders,
+        "cancelled_orders": orders_by_status.get("cancelled", 0),
+        "total_revenue": round(total_revenue, 2),
+        "average_order_value": round(average_order_value, 2),
+        "orders_by_status": orders_by_status,
+        "revenue_by_status": {k: round(v, 2) for k, v in revenue_by_status.items()}
     }
 
 

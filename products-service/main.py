@@ -118,6 +118,69 @@ async def get_popular_products():
             )
 
 
+@app.get("/products/low-stock")
+async def get_low_stock_products(threshold: int = 5):
+    # Find products below threshold
+    low_stock_products = []
+
+    for product_id, product in products_db.items():
+        if product["stock"] <= threshold:
+            low_stock_products.append({
+                "product_id": product_id,
+                "name": product["name"],
+                "category": product["category"],
+                "current_stock": product["stock"],
+                "price": product["price"]
+            })
+
+    if not low_stock_products:
+        return {
+            "threshold": threshold,
+            "low_stock_count": 0,
+            "products": []
+        }
+
+    # Enrich with sales data from orders-service to prioritize by popularity
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{ORDERS_SERVICE_URL}/orders",
+                timeout=5.0
+            )
+
+            if response.status_code == 200:
+                orders = response.json()
+
+                # Calculate sales for each low-stock product
+                for product in low_stock_products:
+                    product_id = product["product_id"]
+                    total_sold = 0
+
+                    for order in orders:
+                        for item in order.get("items", []):
+                            if item["product_id"] == product_id:
+                                total_sold += item["quantity"]
+
+                    product["total_sold"] = total_sold
+                    product["urgency_score"] = total_sold / (product["current_stock"] + 1)  # Higher score = more urgent
+
+                # Sort by urgency (popular items with low stock are most urgent)
+                low_stock_products.sort(key=lambda x: x.get("urgency_score", 0), reverse=True)
+
+        except httpx.RequestError:
+            # If orders service is unavailable, just return products without sales data
+            for product in low_stock_products:
+                product["total_sold"] = "N/A"
+                product["urgency_score"] = "N/A"
+
+    return {
+        "threshold": threshold,
+        "low_stock_count": len(low_stock_products),
+        "products": low_stock_products,
+        "note": "Products sorted by urgency (high sales + low stock = high urgency)"
+    }
+
+
 @app.get("/products/{product_id}", response_model=ProductResponse)
 async def get_product(product_id: int):
     if product_id not in products_db:

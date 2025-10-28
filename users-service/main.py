@@ -191,5 +191,93 @@ async def get_user_orders(user_id: int):
             )
 
 
+@app.get("/users/{user_id}/stats")
+async def get_user_stats(user_id: int):
+    # Verify user exists
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    user = users_db[user_id]
+
+    # Fetch orders from orders-service
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{ORDERS_SERVICE_URL}/orders",
+                params={"user_id": user_id},
+                timeout=5.0
+            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Failed to fetch orders"
+                )
+
+            orders = response.json()
+
+            if not orders:
+                return {
+                    "user_id": user_id,
+                    "user_name": user["name"],
+                    "user_email": user["email"],
+                    "total_orders": 0,
+                    "total_spent": 0.0,
+                    "average_order_value": 0.0,
+                    "orders_by_status": {},
+                    "favorite_category": None,
+                    "first_order_date": None,
+                    "last_order_date": None
+                }
+
+            # Calculate statistics
+            total_spent = 0.0
+            orders_by_status = {}
+            category_counts = {}
+            first_order_date = None
+            last_order_date = None
+
+            for order in orders:
+                # Count orders by status
+                status = order["status"]
+                orders_by_status[status] = orders_by_status.get(status, 0) + 1
+
+                # Sum total spent (exclude cancelled orders)
+                if status != "cancelled":
+                    total_spent += order["total"]
+
+                # Track order dates
+                order_date = order["created_at"]
+                if first_order_date is None or order_date < first_order_date:
+                    first_order_date = order_date
+                if last_order_date is None or order_date > last_order_date:
+                    last_order_date = order_date
+
+                # Note: We don't have category info in orders, would need to fetch from products
+                # For now, skip favorite category calculation
+
+            total_orders = len(orders)
+            average_order_value = total_spent / total_orders if total_orders > 0 else 0.0
+
+            return {
+                "user_id": user_id,
+                "user_name": user["name"],
+                "user_email": user["email"],
+                "total_orders": total_orders,
+                "completed_orders": orders_by_status.get("delivered", 0),
+                "cancelled_orders": orders_by_status.get("cancelled", 0),
+                "total_spent": round(total_spent, 2),
+                "average_order_value": round(average_order_value, 2),
+                "orders_by_status": orders_by_status,
+                "first_order_date": first_order_date,
+                "last_order_date": last_order_date
+            }
+
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Orders service unavailable"
+            )
+
+
 if __name__ == "__main__":
     uvicorn.run(app, host="0.0.0.0", port=8003)
