@@ -2,8 +2,12 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 import uvicorn
+import httpx
 
 app = FastAPI(title="Products Service")
+
+# Configuration
+ORDERS_SERVICE_URL = "http://orders-service:8002"
 
 # In-memory database for demo
 products_db = {}
@@ -45,6 +49,75 @@ async def get_products(category: Optional[str] = None):
     return products
 
 
+@app.get("/products/popular")
+async def get_popular_products():
+    # Fetch all orders from orders-service
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{ORDERS_SERVICE_URL}/orders",
+                timeout=5.0
+            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Failed to fetch orders"
+                )
+
+            orders = response.json()
+
+            # Calculate sales statistics for all products
+            product_stats = {}
+
+            for order in orders:
+                for item in order.get("items", []):
+                    product_id = item["product_id"]
+                    if product_id not in product_stats:
+                        product_stats[product_id] = {
+                            "quantity_sold": 0,
+                            "revenue": 0.0,
+                            "order_count": 0
+                        }
+
+                    product_stats[product_id]["quantity_sold"] += item["quantity"]
+                    product_stats[product_id]["revenue"] += item["price"] * item["quantity"]
+                    product_stats[product_id]["order_count"] += 1
+
+            # Sort by quantity sold and get top 5
+            sorted_products = sorted(
+                product_stats.items(),
+                key=lambda x: x[1]["quantity_sold"],
+                reverse=True
+            )[:5]
+
+            # Enrich with product details
+            popular_products = []
+            for product_id, stats in sorted_products:
+                if product_id in products_db:
+                    product = products_db[product_id]
+                    popular_products.append({
+                        "product_id": product_id,
+                        "product_name": product["name"],
+                        "product_category": product["category"],
+                        "current_price": product["price"],
+                        "current_stock": product["stock"],
+                        "total_quantity_sold": stats["quantity_sold"],
+                        "total_revenue": stats["revenue"],
+                        "orders_count": stats["order_count"]
+                    })
+
+            return {
+                "popular_products_count": len(popular_products),
+                "products": popular_products
+            }
+
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Orders service unavailable"
+            )
+
+
 @app.get("/products/{product_id}", response_model=ProductResponse)
 async def get_product(product_id: int):
     if product_id not in products_db:
@@ -81,6 +154,58 @@ async def update_stock(product_id: int, quantity: int):
 
     products_db[product_id]["stock"] = new_stock
     return {"id": product_id, "stock": new_stock}
+
+
+@app.get("/products/{product_id}/stats")
+async def get_product_stats(product_id: int):
+    if product_id not in products_db:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    product = products_db[product_id]
+
+    # Fetch all orders from orders-service
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{ORDERS_SERVICE_URL}/orders",
+                timeout=5.0
+            )
+            if response.status_code != 200:
+                raise HTTPException(
+                    status_code=503,
+                    detail="Failed to fetch orders"
+                )
+
+            orders = response.json()
+
+            # Calculate statistics for this product
+            total_quantity_sold = 0
+            total_revenue = 0.0
+            order_count = 0
+
+            for order in orders:
+                for item in order.get("items", []):
+                    if item["product_id"] == product_id:
+                        total_quantity_sold += item["quantity"]
+                        total_revenue += item["price"] * item["quantity"]
+                        order_count += 1
+
+            return {
+                "product_id": product_id,
+                "product_name": product["name"],
+                "product_category": product["category"],
+                "current_stock": product["stock"],
+                "current_price": product["price"],
+                "total_quantity_sold": total_quantity_sold,
+                "total_revenue": total_revenue,
+                "orders_count": order_count
+            }
+
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Orders service unavailable"
+            )
 
 
 if __name__ == "__main__":

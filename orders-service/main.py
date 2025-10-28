@@ -9,6 +9,7 @@ app = FastAPI(title="Orders Service")
 
 # Configuration
 PRODUCTS_SERVICE_URL = "http://products-service:8001"
+USERS_SERVICE_URL = "http://users-service:8003"
 
 # In-memory database for demo
 orders_db = {}
@@ -41,6 +42,24 @@ async def root():
 @app.post("/orders", response_model=OrderResponse)
 async def create_order(order: Order):
     global order_id_counter
+
+    # Verify user exists
+    async with httpx.AsyncClient() as client:
+        try:
+            user_response = await client.get(
+                f"{USERS_SERVICE_URL}/users/{order.user_id}",
+                timeout=5.0
+            )
+            if user_response.status_code == 404:
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"User {order.user_id} not found"
+                )
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Users service unavailable"
+            )
 
     # Verify products and check stock
     total = 0.0
@@ -116,6 +135,69 @@ async def update_order_status(order_id: int, status: str):
 
     orders_db[order_id]["status"] = status
     return {"id": order_id, "status": status}
+
+
+@app.get("/orders/{order_id}/details")
+async def get_order_details(order_id: int):
+    if order_id not in orders_db:
+        raise HTTPException(status_code=404, detail="Order not found")
+
+    order = orders_db[order_id]
+
+    # Enrich order items with product details
+    enriched_items = []
+    async with httpx.AsyncClient() as client:
+        for item in order["items"]:
+            try:
+                product_response = await client.get(
+                    f"{PRODUCTS_SERVICE_URL}/products/{item['product_id']}",
+                    timeout=5.0
+                )
+                if product_response.status_code == 200:
+                    product = product_response.json()
+                    enriched_items.append({
+                        "product_id": item["product_id"],
+                        "product_name": product["name"],
+                        "product_description": product["description"],
+                        "product_category": product["category"],
+                        "current_price": product["price"],
+                        "ordered_price": item["price"],
+                        "quantity": item["quantity"],
+                        "subtotal": item["price"] * item["quantity"]
+                    })
+                else:
+                    # Product might be deleted, show minimal info
+                    enriched_items.append({
+                        "product_id": item["product_id"],
+                        "product_name": "Product not found",
+                        "product_description": "",
+                        "product_category": "",
+                        "current_price": 0,
+                        "ordered_price": item["price"],
+                        "quantity": item["quantity"],
+                        "subtotal": item["price"] * item["quantity"]
+                    })
+            except httpx.RequestError:
+                # Service unavailable, show minimal info
+                enriched_items.append({
+                    "product_id": item["product_id"],
+                    "product_name": "Service unavailable",
+                    "product_description": "",
+                    "product_category": "",
+                    "current_price": 0,
+                    "ordered_price": item["price"],
+                    "quantity": item["quantity"],
+                    "subtotal": item["price"] * item["quantity"]
+                })
+
+    return {
+        "id": order_id,
+        "user_id": order["user_id"],
+        "items": enriched_items,
+        "status": order["status"],
+        "total": order["total"],
+        "created_at": order["created_at"]
+    }
 
 
 if __name__ == "__main__":

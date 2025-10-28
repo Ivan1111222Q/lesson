@@ -5,9 +5,13 @@ from typing import Optional
 import uvicorn
 import hashlib
 import secrets
+import httpx
 
 app = FastAPI(title="Users Service")
 security = HTTPBearer()
+
+# Configuration
+ORDERS_SERVICE_URL = "http://orders-service:8002"
 
 # In-memory database for demo
 users_db = {}
@@ -149,6 +153,42 @@ async def get_user(user_id: int):
         "email": user["email"],
         "name": user["name"]
     }
+
+
+@app.get("/users/{user_id}/orders")
+async def get_user_orders(user_id: int):
+    # Verify user exists
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    # Fetch orders from orders-service
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.get(
+                f"{ORDERS_SERVICE_URL}/orders",
+                params={"user_id": user_id},
+                timeout=5.0
+            )
+            if response.status_code == 200:
+                orders = response.json()
+                user = users_db[user_id]
+                return {
+                    "user_id": user_id,
+                    "user_name": user["name"],
+                    "user_email": user["email"],
+                    "orders_count": len(orders),
+                    "orders": orders
+                }
+            else:
+                raise HTTPException(
+                    status_code=response.status_code,
+                    detail="Failed to fetch orders"
+                )
+        except httpx.RequestError:
+            raise HTTPException(
+                status_code=503,
+                detail="Orders service unavailable"
+            )
 
 
 if __name__ == "__main__":
