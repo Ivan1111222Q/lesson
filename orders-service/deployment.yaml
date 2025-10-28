@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+      - name: orders-service
+        image: orders-service:1.0    
+        ports:
+        - containerPort: 8004
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: orders-service
+  type: NodePort
+  ports:
+    - port      : 8002         # Порт сервиса внутри кластера
+      targetPort: 8002         # Порт внутри контейнера
+      nodePort  : 30002        # Порт наружу

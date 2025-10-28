@@ -1,0 +1,35 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pusers-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      containers:
+      - name: users-service
+        image: lesson4356-users-service:1.0   
+        ports:
+        - containerPort: 8003
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: users-service
+  type: NodePort
+  ports:
+    - port      : 8003         # Порт сервиса внутри кластера
+      targetPort: 8003         # Порт внутри контейнера
+      nodePort  : 30003        # Порт наружу
