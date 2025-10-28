@@ -1,10 +1,11 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime
 import uvicorn
 import httpx
 import os
+import time
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
@@ -58,6 +59,98 @@ class OrderResponse(Order):
 @app.get("/")
 async def root():
     return {"service": "orders-service", "status": "running"}
+
+
+async def check_dependency(url: str, service_name: str) -> Dict[str, Any]:
+    """Check if a dependent service is healthy"""
+    start_time = time.time()
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.get(f"{url}/health", timeout=2.0)
+            response_time_ms = round((time.time() - start_time) * 1000, 2)
+
+            if response.status_code == 200:
+                return {
+                    "status": "healthy",
+                    "response_time_ms": response_time_ms
+                }
+            else:
+                return {
+                    "status": "unhealthy",
+                    "status_code": response.status_code,
+                    "response_time_ms": response_time_ms
+                }
+    except Exception as e:
+        response_time_ms = round((time.time() - start_time) * 1000, 2)
+        return {
+            "status": "unhealthy",
+            "error": str(e),
+            "response_time_ms": response_time_ms
+        }
+
+
+@app.get("/health")
+async def health_check():
+    """Basic health check - returns 200 if service is running"""
+    logger.info("Health check requested")
+    return {
+        "status": "healthy",
+        "service": "orders-service"
+    }
+
+
+@app.get("/live")
+async def liveness_check():
+    """Liveness probe - checks if application is alive"""
+    logger.info("Liveness check requested")
+    return {
+        "status": "alive",
+        "service": "orders-service",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe - checks if service is ready to accept requests"""
+    logger.info("Readiness check requested")
+
+    dependencies = {}
+    all_healthy = True
+
+    # Check Products Service
+    products_status = await check_dependency(PRODUCTS_SERVICE_URL, "products-service")
+    dependencies["products-service"] = products_status
+    if products_status["status"] != "healthy":
+        all_healthy = False
+
+    # Check Users Service
+    users_status = await check_dependency(USERS_SERVICE_URL, "users-service")
+    dependencies["users-service"] = users_status
+    if users_status["status"] != "healthy":
+        all_healthy = False
+
+    status = "ready" if all_healthy else "not_ready"
+
+    logger.info(
+        "Readiness check completed",
+        extra={
+            "status": status,
+            "dependencies": dependencies
+        }
+    )
+
+    response = {
+        "status": status,
+        "service": "orders-service",
+        "timestamp": datetime.now().isoformat(),
+        "dependencies": dependencies
+    }
+
+    if not all_healthy:
+        raise HTTPException(status_code=503, detail=response)
+
+    return response
 
 
 @app.post("/orders", response_model=OrderResponse)

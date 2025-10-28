@@ -305,6 +305,72 @@ Authorization: Bearer {token}
 
 ---
 
+#### `GET /health`
+**Описание:** Базовая проверка здоровья сервиса
+
+**Ответ (200):**
+```json
+{
+  "status": "healthy",
+  "service": "users-service"
+}
+```
+
+---
+
+#### `GET /live`
+**Описание:** Liveness probe для Kubernetes - проверяет что приложение живо
+
+**Ответ (200):**
+```json
+{
+  "status": "alive",
+  "service": "users-service",
+  "timestamp": "2025-10-28T15:33:06.715980"
+}
+```
+
+---
+
+#### `GET /ready`
+**Описание:** Readiness probe для Kubernetes - проверяет готовность сервиса принимать запросы
+
+**Проверяет зависимости:**
+- Orders Service
+
+**Ответ (200) - все зависимости доступны:**
+```json
+{
+  "status": "ready",
+  "service": "users-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "orders-service": {
+      "status": "healthy",
+      "response_time_ms": 45.23
+    }
+  }
+}
+```
+
+**Ответ (503) - есть недоступные зависимости:**
+```json
+{
+  "status": "not_ready",
+  "service": "users-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "orders-service": {
+      "status": "unhealthy",
+      "error": "Connection refused",
+      "response_time_ms": 2000.15
+    }
+  }
+}
+```
+
+---
+
 ### Products Service (http://localhost:8001)
 
 #### `GET /`
@@ -595,6 +661,72 @@ Authorization: Bearer {token}
 
 ---
 
+#### `GET /health`
+**Описание:** Базовая проверка здоровья сервиса
+
+**Ответ (200):**
+```json
+{
+  "status": "healthy",
+  "service": "products-service"
+}
+```
+
+---
+
+#### `GET /live`
+**Описание:** Liveness probe для Kubernetes - проверяет что приложение живо
+
+**Ответ (200):**
+```json
+{
+  "status": "alive",
+  "service": "products-service",
+  "timestamp": "2025-10-28T15:33:06.715980"
+}
+```
+
+---
+
+#### `GET /ready`
+**Описание:** Readiness probe для Kubernetes - проверяет готовность сервиса принимать запросы
+
+**Проверяет зависимости:**
+- Orders Service
+
+**Ответ (200) - все зависимости доступны:**
+```json
+{
+  "status": "ready",
+  "service": "products-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "orders-service": {
+      "status": "healthy",
+      "response_time_ms": 38.12
+    }
+  }
+}
+```
+
+**Ответ (503) - есть недоступные зависимости:**
+```json
+{
+  "status": "not_ready",
+  "service": "products-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "orders-service": {
+      "status": "unhealthy",
+      "error": "Connection timeout",
+      "response_time_ms": 2001.45
+    }
+  }
+}
+```
+
+---
+
 ### Orders Service (http://localhost:8002)
 
 #### `GET /`
@@ -866,6 +998,81 @@ Authorization: Bearer {token}
 **Описание:** Prometheus метрики сервиса
 
 **Ответ (200):** Текстовый формат Prometheus
+
+---
+
+#### `GET /health`
+**Описание:** Базовая проверка здоровья сервиса
+
+**Ответ (200):**
+```json
+{
+  "status": "healthy",
+  "service": "orders-service"
+}
+```
+
+---
+
+#### `GET /live`
+**Описание:** Liveness probe для Kubernetes - проверяет что приложение живо
+
+**Ответ (200):**
+```json
+{
+  "status": "alive",
+  "service": "orders-service",
+  "timestamp": "2025-10-28T15:33:06.715980"
+}
+```
+
+---
+
+#### `GET /ready`
+**Описание:** Readiness probe для Kubernetes - проверяет готовность сервиса принимать запросы
+
+**Проверяет зависимости:**
+- Products Service
+- Users Service
+
+**Ответ (200) - все зависимости доступны:**
+```json
+{
+  "status": "ready",
+  "service": "orders-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "products-service": {
+      "status": "healthy",
+      "response_time_ms": 32.54
+    },
+    "users-service": {
+      "status": "healthy",
+      "response_time_ms": 41.28
+    }
+  }
+}
+```
+
+**Ответ (503) - есть недоступные зависимости:**
+```json
+{
+  "status": "not_ready",
+  "service": "orders-service",
+  "timestamp": "2025-10-28T15:33:06.715980",
+  "dependencies": {
+    "products-service": {
+      "status": "healthy",
+      "response_time_ms": 35.12
+    },
+    "users-service": {
+      "status": "unhealthy",
+      "error": "Service unavailable",
+      "response_time_ms": 2000.87
+    }
+  }
+}
+```
 
 ## Примеры использования
 
