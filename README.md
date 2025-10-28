@@ -100,47 +100,772 @@ pip install -r requirements.txt
 python main.py
 ```
 
-## API Endpoints
+## API Endpoints - Полная документация
 
 ### Users Service (http://localhost:8003)
 
+#### `GET /`
+**Описание:** Проверка работоспособности сервиса
+
+**Ответ:**
+```json
+{
+  "service": "users-service",
+  "status": "running"
+}
 ```
-POST   /register                - Регистрация нового пользователя
-POST   /login                   - Вход пользователя
-GET    /me                      - Получить текущего пользователя (требует токен)
-POST   /logout                  - Выход (требует токен)
-GET    /users/{user_id}         - Получить пользователя по ID
-GET    /users/{user_id}/orders  - Получить все заказы пользователя
-GET    /users/{user_id}/stats   - Получить статистику заказов пользователя
+
+---
+
+#### `POST /register`
+**Описание:** Регистрация нового пользователя
+
+**Тело запроса:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123",
+  "name": "John Doe"
+}
 ```
+
+**Ответ (200):**
+```json
+{
+  "token": "secure-token-string",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "John Doe"
+  }
+}
+```
+
+**Ошибки:**
+- `400` - Email уже зарегистрирован
+
+---
+
+#### `POST /login`
+**Описание:** Вход пользователя в систему
+
+**Тело запроса:**
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
+
+**Ответ (200):**
+```json
+{
+  "token": "secure-token-string",
+  "user": {
+    "id": 1,
+    "email": "user@example.com",
+    "name": "John Doe"
+  }
+}
+```
+
+**Ошибки:**
+- `401` - Неверный email или пароль
+
+---
+
+#### `GET /me`
+**Описание:** Получить информацию о текущем пользователе
+
+**Заголовки:**
+```
+Authorization: Bearer {token}
+```
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+**Ошибки:**
+- `401` - Неверный или отсутствующий токен
+
+---
+
+#### `POST /logout`
+**Описание:** Выход из системы (удаление токена)
+
+**Заголовки:**
+```
+Authorization: Bearer {token}
+```
+
+**Ответ (200):**
+```json
+{
+  "message": "Logged out successfully"
+}
+```
+
+---
+
+#### `GET /users/{user_id}`
+**Описание:** Получить информацию о пользователе по ID
+
+**Параметры пути:**
+- `user_id` (integer) - ID пользователя
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "email": "user@example.com",
+  "name": "John Doe"
+}
+```
+
+**Ошибки:**
+- `404` - Пользователь не найден
+
+---
+
+#### `GET /users/{user_id}/orders`
+**Описание:** Получить все заказы пользователя
+
+**Параметры пути:**
+- `user_id` (integer) - ID пользователя
+
+**Ответ (200):**
+```json
+{
+  "user_id": 1,
+  "user_name": "John Doe",
+  "user_email": "user@example.com",
+  "orders_count": 3,
+  "orders": [
+    {
+      "id": 1,
+      "user_id": 1,
+      "items": [...],
+      "status": "delivered",
+      "total": 2475.0,
+      "created_at": "2025-10-28T15:33:06.715980"
+    }
+  ]
+}
+```
+
+**Ошибки:**
+- `404` - Пользователь не найден
+- `503` - Orders Service недоступен
+
+---
+
+#### `GET /users/{user_id}/stats`
+**Описание:** Получить статистику заказов пользователя
+
+**Параметры пути:**
+- `user_id` (integer) - ID пользователя
+
+**Ответ (200):**
+```json
+{
+  "user_id": 1,
+  "user_name": "John Doe",
+  "user_email": "user@example.com",
+  "total_orders": 5,
+  "completed_orders": 3,
+  "cancelled_orders": 1,
+  "total_spent": 4999.95,
+  "average_order_value": 999.99,
+  "orders_by_status": {
+    "delivered": 3,
+    "pending": 1,
+    "cancelled": 1
+  },
+  "first_order_date": "2025-10-28T10:00:00",
+  "last_order_date": "2025-10-28T15:33:06"
+}
+```
+
+**Ошибки:**
+- `404` - Пользователь не найден
+- `503` - Orders Service недоступен
+
+---
+
+#### `GET /metrics`
+**Описание:** Prometheus метрики сервиса
+
+**Ответ (200):** Текстовый формат Prometheus
+
+---
 
 ### Products Service (http://localhost:8001)
 
+#### `GET /`
+**Описание:** Проверка работоспособности сервиса
+
+**Ответ:**
+```json
+{
+  "service": "products-service",
+  "status": "running"
+}
 ```
-POST   /products                    - Создать товар
-GET    /products                    - Получить список товаров
-GET    /products?category={name}    - Фильтр по категории
-GET    /products/{product_id}       - Получить товар по ID
-PUT    /products/{product_id}       - Обновить товар
-DELETE /products/{product_id}       - Удалить товар
-PATCH  /products/{product_id}/stock - Обновить количество на складе
-GET    /products/popular            - Получить популярные товары (на основе заказов)
-GET    /products/low-stock          - Получить товары с низким остатком
-GET    /products/{product_id}/stats - Получить статистику продаж продукта
+
+---
+
+#### `POST /products`
+**Описание:** Создать новый товар
+
+**Тело запроса:**
+```json
+{
+  "name": "Laptop",
+  "description": "High-performance laptop",
+  "price": 1200.0,
+  "stock": 10,
+  "category": "electronics"
+}
 ```
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "name": "Laptop",
+  "description": "High-performance laptop",
+  "price": 1200.0,
+  "stock": 10,
+  "category": "electronics"
+}
+```
+
+---
+
+#### `GET /products`
+**Описание:** Получить список всех товаров
+
+**Query параметры (опционально):**
+- `category` (string) - Фильтр по категории
+
+**Примеры:**
+- `GET /products` - все товары
+- `GET /products?category=electronics` - только электроника
+
+**Ответ (200):**
+```json
+[
+  {
+    "id": 1,
+    "name": "Laptop",
+    "description": "High-performance laptop",
+    "price": 1200.0,
+    "stock": 10,
+    "category": "electronics"
+  },
+  {
+    "id": 2,
+    "name": "Mouse",
+    "description": "Wireless mouse",
+    "price": 25.0,
+    "stock": 50,
+    "category": "electronics"
+  }
+]
+```
+
+---
+
+#### `GET /products/{product_id}`
+**Описание:** Получить товар по ID
+
+**Параметры пути:**
+- `product_id` (integer) - ID товара
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "name": "Laptop",
+  "description": "High-performance laptop",
+  "price": 1200.0,
+  "stock": 10,
+  "category": "electronics"
+}
+```
+
+**Ошибки:**
+- `404` - Товар не найден
+
+---
+
+#### `PUT /products/{product_id}`
+**Описание:** Обновить информацию о товаре
+
+**Параметры пути:**
+- `product_id` (integer) - ID товара
+
+**Тело запроса:**
+```json
+{
+  "name": "Gaming Laptop",
+  "description": "Updated description",
+  "price": 1500.0,
+  "stock": 15,
+  "category": "electronics"
+}
+```
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "name": "Gaming Laptop",
+  "description": "Updated description",
+  "price": 1500.0,
+  "stock": 15,
+  "category": "electronics"
+}
+```
+
+**Ошибки:**
+- `404` - Товар не найден
+
+---
+
+#### `DELETE /products/{product_id}`
+**Описание:** Удалить товар
+
+**Параметры пути:**
+- `product_id` (integer) - ID товара
+
+**Ответ (200):**
+```json
+{
+  "message": "Product deleted successfully"
+}
+```
+
+**Ошибки:**
+- `404` - Товар не найден
+
+---
+
+#### `PATCH /products/{product_id}/stock`
+**Описание:** Обновить количество товара на складе
+
+**Параметры пути:**
+- `product_id` (integer) - ID товара
+
+**Query параметры:**
+- `quantity` (integer) - Изменение количества (может быть отрицательным)
+
+**Примеры:**
+- `PATCH /products/1/stock?quantity=10` - добавить 10 единиц
+- `PATCH /products/1/stock?quantity=-5` - убавить 5 единиц
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "name": "Laptop",
+  "stock": 15,
+  "message": "Stock updated successfully"
+}
+```
+
+**Ошибки:**
+- `404` - Товар не найден
+- `400` - Недостаточно товара на складе (при отрицательном quantity)
+
+---
+
+#### `GET /products/popular`
+**Описание:** Получить популярные товары на основе количества заказов
+
+**Query параметры (опционально):**
+- `limit` (integer, default=10) - Максимальное количество товаров
+
+**Пример:**
+- `GET /products/popular?limit=5`
+
+**Ответ (200):**
+```json
+[
+  {
+    "product_id": 1,
+    "product_name": "Laptop",
+    "product_category": "electronics",
+    "product_price": 1200.0,
+    "current_stock": 8,
+    "times_ordered": 15,
+    "total_quantity_sold": 45,
+    "total_revenue": 54000.0
+  },
+  {
+    "product_id": 2,
+    "product_name": "Mouse",
+    "product_category": "electronics",
+    "product_price": 25.0,
+    "current_stock": 35,
+    "times_ordered": 12,
+    "total_quantity_sold": 48,
+    "total_revenue": 1200.0
+  }
+]
+```
+
+**Ошибки:**
+- `503` - Orders Service недоступен
+
+---
+
+#### `GET /products/low-stock`
+**Описание:** Получить товары с низким остатком
+
+**Query параметры (опционально):**
+- `threshold` (integer, default=10) - Порог низкого остатка
+
+**Пример:**
+- `GET /products/low-stock?threshold=5`
+
+**Ответ (200):**
+```json
+[
+  {
+    "id": 5,
+    "name": "Keyboard",
+    "category": "electronics",
+    "stock": 3,
+    "price": 50.0,
+    "warning": "Low stock alert"
+  },
+  {
+    "id": 8,
+    "name": "Headphones",
+    "category": "electronics",
+    "stock": 5,
+    "price": 75.0,
+    "warning": "Low stock alert"
+  }
+]
+```
+
+---
+
+#### `GET /products/{product_id}/stats`
+**Описание:** Получить статистику продаж конкретного товара
+
+**Параметры пути:**
+- `product_id` (integer) - ID товара
+
+**Ответ (200):**
+```json
+{
+  "product_id": 1,
+  "product_name": "Laptop",
+  "product_category": "electronics",
+  "current_price": 1200.0,
+  "current_stock": 8,
+  "times_ordered": 15,
+  "total_quantity_sold": 45,
+  "total_revenue": 54000.0,
+  "average_order_quantity": 3.0,
+  "first_order_date": "2025-10-20T10:00:00",
+  "last_order_date": "2025-10-28T15:33:06"
+}
+```
+
+**Ошибки:**
+- `404` - Товар не найден
+- `503` - Orders Service недоступен
+
+---
+
+#### `GET /metrics`
+**Описание:** Prometheus метрики сервиса
+
+**Ответ (200):** Текстовый формат Prometheus
+
+---
 
 ### Orders Service (http://localhost:8002)
 
+#### `GET /`
+**Описание:** Проверка работоспособности сервиса
+
+**Ответ:**
+```json
+{
+  "service": "orders-service",
+  "status": "running"
+}
 ```
-POST   /orders                      - Создать заказ
-GET    /orders                      - Получить все заказы
-GET    /orders?user_id={id}         - Фильтр по пользователю
-GET    /orders/{order_id}           - Получить заказ по ID
-GET    /orders/{order_id}/details   - Получить детальную информацию о заказе с продуктами
-PATCH  /orders/{order_id}/status    - Обновить статус заказа
-POST   /orders/{order_id}/cancel    - Отменить заказ (возвращает товары на склад)
-GET    /orders/stats/revenue        - Получить статистику по выручке
+
+---
+
+#### `POST /orders`
+**Описание:** Создать новый заказ
+
+**Тело запроса:**
+```json
+{
+  "user_id": 1,
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2,
+      "price": 1200.0
+    },
+    {
+      "product_id": 2,
+      "quantity": 3,
+      "price": 25.0
+    }
+  ],
+  "status": "pending"
+}
 ```
+
+**Процесс создания заказа:**
+1. Проверяется существование пользователя (вызов Users Service)
+2. Для каждого товара проверяется наличие и достаточность stock (вызов Products Service)
+3. Автоматически обновляется stock товаров (вычитается количество)
+4. Создается заказ с расчетом общей суммы
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2,
+      "price": 1200.0
+    },
+    {
+      "product_id": 2,
+      "quantity": 3,
+      "price": 25.0
+    }
+  ],
+  "status": "pending",
+  "total": 2475.0,
+  "created_at": "2025-10-28T15:33:06.715980"
+}
+```
+
+**Ошибки:**
+- `404` - Пользователь или товар не найден
+- `400` - Недостаточно товара на складе
+- `503` - Users Service или Products Service недоступен
+
+---
+
+#### `GET /orders`
+**Описание:** Получить список всех заказов
+
+**Query параметры (опционально):**
+- `user_id` (integer) - Фильтр по пользователю
+
+**Примеры:**
+- `GET /orders` - все заказы
+- `GET /orders?user_id=1` - заказы пользователя с ID 1
+
+**Ответ (200):**
+```json
+[
+  {
+    "id": 1,
+    "user_id": 1,
+    "items": [...],
+    "status": "delivered",
+    "total": 2475.0,
+    "created_at": "2025-10-28T15:33:06.715980"
+  },
+  {
+    "id": 2,
+    "user_id": 2,
+    "items": [...],
+    "status": "pending",
+    "total": 1500.0,
+    "created_at": "2025-10-28T16:00:00"
+  }
+]
+```
+
+---
+
+#### `GET /orders/{order_id}`
+**Описание:** Получить информацию о заказе по ID
+
+**Параметры пути:**
+- `order_id` (integer) - ID заказа
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "items": [
+    {
+      "product_id": 1,
+      "quantity": 2,
+      "price": 1200.0
+    }
+  ],
+  "status": "delivered",
+  "total": 2400.0,
+  "created_at": "2025-10-28T15:33:06.715980"
+}
+```
+
+**Ошибки:**
+- `404` - Заказ не найден
+
+---
+
+#### `GET /orders/{order_id}/details`
+**Описание:** Получить детальную информацию о заказе с обогащенными данными о товарах
+
+**Параметры пути:**
+- `order_id` (integer) - ID заказа
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "user_id": 1,
+  "items": [
+    {
+      "product_id": 1,
+      "product_name": "Laptop",
+      "product_description": "High-performance laptop",
+      "product_category": "electronics",
+      "current_price": 1200.0,
+      "ordered_price": 1200.0,
+      "quantity": 2,
+      "subtotal": 2400.0
+    },
+    {
+      "product_id": 2,
+      "product_name": "Mouse",
+      "product_description": "Wireless mouse",
+      "product_category": "electronics",
+      "current_price": 25.0,
+      "ordered_price": 25.0,
+      "quantity": 3,
+      "subtotal": 75.0
+    }
+  ],
+  "status": "delivered",
+  "total": 2475.0,
+  "created_at": "2025-10-28T15:33:06.715980"
+}
+```
+
+**Примечание:** Если товар был удален из каталога, будет показано "Product not found"
+
+**Ошибки:**
+- `404` - Заказ не найден
+
+---
+
+#### `PATCH /orders/{order_id}/status`
+**Описание:** Обновить статус заказа
+
+**Параметры пути:**
+- `order_id` (integer) - ID заказа
+
+**Query параметры:**
+- `status` (string) - Новый статус (pending, processing, shipped, delivered, cancelled)
+
+**Пример:**
+- `PATCH /orders/1/status?status=shipped`
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "status": "shipped"
+}
+```
+
+**Ошибки:**
+- `404` - Заказ не найден
+- `400` - Недопустимый статус
+
+---
+
+#### `POST /orders/{order_id}/cancel`
+**Описание:** Отменить заказ и вернуть товары на склад
+
+**Параметры пути:**
+- `order_id` (integer) - ID заказа
+
+**Процесс отмены:**
+1. Проверяется статус заказа (можно отменить только pending или processing)
+2. Для каждого товара возвращается количество на склад (вызов Products Service)
+3. Статус заказа меняется на "cancelled"
+4. Уменьшается метрика выручки
+
+**Ответ (200):**
+```json
+{
+  "id": 1,
+  "status": "cancelled",
+  "message": "Order cancelled successfully. Stock returned to inventory.",
+  "returned_items": 2
+}
+```
+
+**Ошибки:**
+- `404` - Заказ не найден
+- `400` - Заказ нельзя отменить (статус shipped/delivered)
+- `503` - Products Service недоступен
+
+---
+
+#### `GET /orders/stats/revenue`
+**Описание:** Получить статистику по выручке и заказам
+
+**Ответ (200):**
+```json
+{
+  "total_orders": 10,
+  "completed_orders": 7,
+  "cancelled_orders": 2,
+  "total_revenue": 12475.50,
+  "average_order_value": 1247.55,
+  "orders_by_status": {
+    "pending": 1,
+    "processing": 0,
+    "shipped": 2,
+    "delivered": 7,
+    "cancelled": 2
+  },
+  "revenue_by_status": {
+    "delivered": 10000.00,
+    "shipped": 2475.50
+  }
+}
+```
+
+**Примечание:** Отмененные заказы не учитываются в выручке
+
+---
+
+#### `GET /metrics`
+**Описание:** Prometheus метрики сервиса
+
+**Ответ (200):** Текстовый формат Prometheus
 
 ## Примеры использования
 
