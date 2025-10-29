@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина - Интернет-магазин</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Интернет-магазин</h1>
+            <nav>
+                <a href="/index.html">Каталог</a>
+                <a href="/cart.html">Корзина (<span id="cart-count">0</span>)</a>
+                <a href="/profile.html">Профиль</a>
+            </nav>
+            <div class="user-info"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2>Корзина</h2>
+
+        <div id="cart-container"></div>
+
+        <div id="cart-summary" class="hidden">
+            <div class="cart-total">
+                Итого: <span id="total-price">0 ₽</span>
+            </div>
+            <button onclick="checkout()" class="btn">Оформить заказ</button>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        function renderCart() {
+            const cart = Storage.getCart();
+            const container = document.getElementById('cart-container');
+            const summary = document.getElementById('cart-summary');
+
+            if (cart.length === 0) {
+                container.innerHTML = '<p>Корзина пуста</p>';
+                summary.classList.add('hidden');
+                return;
+            }
+
+            summary.classList.remove('hidden');
+
+            container.innerHTML = `
+                <div class="cart-items">
+                    ${cart.map(item => `
+                        <div class="cart-item">
+                            <div>
+                                <h3>${item.name}</h3>
+                                <div class="price">${App.formatPrice(item.price)}</div>
+                            </div>
+                            <div>
+                                <input type="number"
+                                       value="${item.quantity}"
+                                       min="1"
+                                       max="99"
+                                       style="width: 60px;"
+                                       onchange="updateQuantity(${item.product_id}, this.value)">
+                                <button onclick="removeItem(${item.product_id})">Удалить</button>
+                            </div>
+                            <div>
+                                <strong>${App.formatPrice(item.price * item.quantity)}</strong>
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+
+            const total = Storage.getCartTotal();
+            document.getElementById('total-price').textContent = App.formatPrice(total);
+        }
+
+        function updateQuantity(productId, quantity) {
+            quantity = parseInt(quantity);
+            if (quantity < 1) quantity = 1;
+
+            Storage.updateCartQuantity(productId, quantity);
+            renderCart();
+            App.updateCartCount();
+        }
+
+        function removeItem(productId) {
+            if (confirm('Удалить товар из корзины?')) {
+                Storage.removeFromCart(productId);
+                renderCart();
+                App.updateCartCount();
+            }
+        }
+
+        async function checkout() {
+            if (!App.requireAuth()) return;
+
+            const cart = Storage.getCart();
+            if (cart.length === 0) {
+                alert('Корзина пуста');
+                return;
+            }
+
+            const user = Storage.getUser();
+
+            try {
+                const orderItems = cart.map(item => ({
+                    product_id: item.product_id,
+                    quantity: item.quantity,
+                    price: item.price
+                }));
+
+                const order = await OrdersAPI.create({
+                    user_id: user.id,
+                    items: orderItems
+                });
+
+                App.showSuccess(`Заказ #${order.id} успешно создан!`);
+                Storage.clearCart();
+                App.updateCartCount();
+
+                setTimeout(() => {
+                    window.location.href = '/profile.html';
+                }, 2000);
+            } catch (error) {
+                App.showError(`Ошибка создания заказа: ${error.message}`);
+            }
+        }
+
+        // Load cart on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            renderCart();
+        });
+    </script>
+</body>
+</html>
