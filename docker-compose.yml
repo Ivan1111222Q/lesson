@@ -1,0 +1,21 @@
+services:
+ orders-service:
+  build:
+   context: ./orders-service
+   dockerfile: Dockerfile
+  ports:
+   - 8002:8002
+
+ products-service:
+  build:
+   context: ./products-service
+   dockerfile: Dockerfile
+  ports:
+   - 8001:8001   
+
+ users-service:
+  build:
+   context: ./users-service
+   dockerfile: Dockerfile
+  ports:
+   - 8003:8003       
