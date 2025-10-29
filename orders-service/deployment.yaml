@@ -17,7 +17,7 @@ spec:
       - name: orders-service
         image: orders-service:1.0    
         ports:
-        - containerPort: 8004
+        - containerPort: 8002
 
 ---
 apiVersion: v1
