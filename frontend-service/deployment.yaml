@@ -18,6 +18,14 @@ spec:
         image: frontend-service:1.0    
         ports:
         - containerPort: 80
+        volumeMounts:
+          - name: nginx-config
+            mountPath: /etc/nginx/nginx.conf
+            subPath: nginx.conf
+      volumes:
+        - name: nginx-config
+          configMap:
+            name: frontend-nginx-config
 
 ---
 apiVersion: v1
