@@ -7,7 +7,7 @@ spec:
   replicas: 1
   selector:
     matchLabels:
-      app: pusers-service
+      app: users-service
   template:
     metadata:
       labels:
@@ -15,9 +15,12 @@ spec:
     spec:
       containers:
       - name: users-service
-        image: lesson4356-users-service:1.0   
+        image: users-service:2.0   
         ports:
         - containerPort: 8003
+        envFrom:
+        - configMapRef:
+            name: users-config
 
 ---
 apiVersion: v1
