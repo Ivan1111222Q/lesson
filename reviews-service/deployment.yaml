@@ -21,6 +21,13 @@ spec:
         envFrom:
         - configMapRef:
             name: reviews-config
+        volumeMounts:
+            - name: reviews-storage
+              mountPath: /app/uploads
+      volumes:
+        - name: reviews-storage
+          persistentVolumeClaim:
+            claimName: reviews-pvc      
 
 ---
 apiVersion: v1
