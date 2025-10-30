@@ -21,6 +21,8 @@ spec:
         envFrom:
         - configMapRef:
             name: users-config
+        - secretRef:
+            name: users-service-secrets     
 
 ---
 apiVersion: v1
