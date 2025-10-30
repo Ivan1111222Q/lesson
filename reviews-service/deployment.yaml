@@ -1,0 +1,38 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: reviews-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: reviews-service
+  template:
+    metadata:
+      labels:
+        app: reviews-service
+    spec:
+      containers:
+      - name: reviews-service
+        image: reviews-service:1.0
+        ports:
+        - containerPort: 8004
+        envFrom:
+        - configMapRef:
+            name: reviews-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: reviews-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: reviews-service
+  type: NodePort
+  ports:
+    - port      : 8004         # Порт сервиса внутри кластера
+      targetPort: 8004         # Порт внутри контейнера
+      nodePort  : 30005        # Порт наружу

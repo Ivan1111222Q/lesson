@@ -15,9 +15,12 @@ spec:
     spec:
       containers:
       - name: products-service
-        image: lesson4356-products-service:1.0   
+        image: products-service:2.0  
         ports:
         - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: products-config
 
 ---
 apiVersion: v1
