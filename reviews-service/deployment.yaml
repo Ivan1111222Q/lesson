@@ -17,7 +17,7 @@ spec:
       - name: reviews-service
         image: reviews-service:1.0
         ports:
-        - containerPort: 8004
+        - containerPort: 8003
         envFrom:
         - configMapRef:
             name: reviews-config
@@ -40,6 +40,6 @@ spec:
     app: reviews-service
   type: NodePort
   ports:
-    - port      : 8004         # Порт сервиса внутри кластера
-      targetPort: 8004         # Порт внутри контейнера
+    - port      : 8003         # Порт сервиса внутри кластера
+      targetPort: 8003         # Порт внутри контейнера
       nodePort  : 30005        # Порт наружу
