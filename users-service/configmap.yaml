@@ -5,6 +5,7 @@ metadata:
   namespace: lesson4356
 data:
   ORDERS_SERVICE_URL: "http://orders-service:8002"
+  REVIEWS_SERVICE_URL: "http://reviews-service:8004"
   PORT: "8003"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
