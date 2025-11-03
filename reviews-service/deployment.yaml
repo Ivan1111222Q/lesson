@@ -15,15 +15,17 @@ spec:
     spec:
       containers:
       - name: reviews-service
-        image: reviews-service:1.0
+        image: reviews-service:5.0
         ports:
         - containerPort: 8004
         envFrom:
-        - configMapRef:
-            name: reviews-config
+          - configMapRef:
+              name: reviews-config
+          - secretRef:
+              name: reviews-secret
         volumeMounts:
-            - name: reviews-storage
-              mountPath: /app/uploads
+          - name: reviews-storage
+            mountPath: /app/uploads
       volumes:
         - name: reviews-storage
           persistentVolumeClaim:

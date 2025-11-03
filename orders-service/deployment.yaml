@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: orders-service
-        image: orders-service:2.0    
+        image: orders-service:4.0    
         ports:
         - containerPort: 8002
         envFrom:

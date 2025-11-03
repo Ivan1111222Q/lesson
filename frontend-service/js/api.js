@@ -1,9 +1,9 @@
 // API Configuration
 const API_BASE = {
-    products: 'http://localhost:8001',
-    orders: 'http://localhost:8002',
-    users: 'http://localhost:8003',
-    reviews: 'http://localhost:8004'
+    products: 'http://localhost:30001',
+    orders: 'http://localhost:30002',
+    users: 'http://localhost:30003',
+    reviews: 'http://localhost:30009'
 };
 
 // Helper function to make API requests

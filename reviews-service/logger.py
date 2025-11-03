@@ -10,7 +10,7 @@ trace_id_var: ContextVar[str] = ContextVar("trace_id", default="")
 # Configuration
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 LOG_FORMAT = os.getenv("LOG_FORMAT", "json").lower()
-SERVICE_NAME = "users-service"
+SERVICE_NAME = "fetching-reviews"
 
 
 class CustomJsonFormatter(jsonlogger.JsonFormatter):
