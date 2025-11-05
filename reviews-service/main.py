@@ -94,6 +94,82 @@ class ReviewResponse(BaseModel):
     is_verified_purchase: bool
     created_at: datetime
 
+@app.get("/")
+async def root():
+    return {"service": "reviews-service", "status": "running"}
+
+
+@app.get("/health")
+async def health_check():
+    """Basic health check - returns 200 if service is running"""
+    logger.info("Health check requested")
+    return {
+        "status": "healthy",
+        "service": "reviews-service"
+    }
+
+
+@app.get("/live")
+async def liveness_check():
+    """Liveness probe - checks if application is alive"""
+    logger.info("Liveness check requested")
+    return {
+        "status": "alive",
+        "service": "reviews-service",
+        "timestamp": datetime.now().isoformat()
+    }
+
+
+@app.get("/ready")
+async def readiness_check():
+    """Readiness probe - checks if service is ready to accept requests"""
+    logger.info("Readiness check requested")
+
+    dependencies = {}
+    all_healthy = True
+
+    # Check Users Service
+    users_status = await check_dependency(USERS_SERVICE_URL, "users-service")
+    dependencies["users-service"] = users_status
+    if users_status["status"] != "healthy":
+        all_healthy = False
+
+    # Check Products Service
+    products_status = await check_dependency(PRODUCTS_SERVICE_URL, "products-service")
+    dependencies["products-service"] = products_status
+    if products_status["status"] != "healthy":
+        all_healthy = False
+
+    # Check Orders Service
+    orders_status = await check_dependency(ORDERS_SERVICE_URL, "orders-service")
+    dependencies["orders-service"] = orders_status
+    if orders_status["status"] != "healthy":
+        all_healthy = False
+
+    status = "ready" if all_healthy else "not_ready"
+
+    logger.info(
+        "Readiness check completed",
+        extra={
+            "status": status,
+            "dependencies": dependencies
+        }
+    )
+
+    response = {
+        "status": status,
+        "service": "reviews-service",
+        "timestamp": datetime.now().isoformat(),
+        "dependencies": dependencies
+    }
+
+    if not all_healthy:
+        raise HTTPException(status_code=503, detail=response)
+
+    return response
+
+
+
 
 async def check_dependency(url: str) -> Dict[str, Any]:
     start_time = time.time()
