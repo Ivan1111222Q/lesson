@@ -13,10 +13,10 @@ import aiofiles
 from pathlib import Path
 from PIL import Image
 import io
-import sqlalchemy
-from sqlalchemy import Table, Column, Integer, String, Boolean, DateTime, MetaData, create_engine, select, func
+from sqlalchemy import select, func, insert, delete
 
 from dotenv import load_dotenv
+from database import engine, async_session_maker, reviews, init_db
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
@@ -35,30 +35,6 @@ load_dotenv()
 
 app = FastAPI(title="Reviews Service")
 
-POSTGRES_URL = (
-    f"postgresql+psycopg2://{os.getenv('POSTGRES_USER')}:{os.getenv('POSTGRES_PASSWORD')}"
-    f"@{os.getenv('POSTGRES_HOST')}:{os.getenv('POSTGRES_PORT')}/{os.getenv('POSTGRES_DB')}"
-)
-
-engine = create_engine(POSTGRES_URL)
-metadata = MetaData()
-
-reviews = Table(
-    "reviews",
-    metadata,
-    Column("id", Integer, primary_key=True),
-    Column("user_id", Integer, nullable=False),
-    Column("product_id", Integer, nullable=False),
-    Column("order_id", Integer, nullable=False),
-    Column("rating", Integer, nullable=False),
-    Column("text", String, nullable=False),
-    Column("photos", String, nullable=True),  # comma-separated filenames
-    Column("is_verified_purchase", Boolean, default=False),
-    Column("created_at", DateTime, default=datetime.utcnow),
-)
-
-metadata.create_all(engine)
-
 # CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -70,6 +46,15 @@ app.add_middleware(
 app.add_middleware(TraceIDMiddleware)
 
 Instrumentator().instrument(app).expose(app)
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize database on startup"""
+    logger.info("Initializing database...")
+    await init_db()
+    logger.info("Database initialized successfully")
+
 
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://users-service:8003")
 PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "http://products-service:8001")
@@ -129,19 +114,19 @@ async def readiness_check():
     all_healthy = True
 
     # Check Users Service
-    users_status = await check_dependency(USERS_SERVICE_URL, "users-service")
+    users_status = await check_dependency(USERS_SERVICE_URL)
     dependencies["users-service"] = users_status
     if users_status["status"] != "healthy":
         all_healthy = False
 
     # Check Products Service
-    products_status = await check_dependency(PRODUCTS_SERVICE_URL, "products-service")
+    products_status = await check_dependency(PRODUCTS_SERVICE_URL)
     dependencies["products-service"] = products_status
     if products_status["status"] != "healthy":
         all_healthy = False
 
     # Check Orders Service
-    orders_status = await check_dependency(ORDERS_SERVICE_URL, "orders-service")
+    orders_status = await check_dependency(ORDERS_SERVICE_URL)
     dependencies["orders-service"] = orders_status
     if orders_status["status"] != "healthy":
         all_healthy = False
@@ -278,9 +263,9 @@ async def create_review(
         photos_uploaded_total.inc()
 
     # Insert review into DB
-    with engine.connect() as conn:
-        result = conn.execute(
-            reviews.insert().values(
+    async with async_session_maker() as session:
+        result = await session.execute(
+            insert(reviews).values(
                 user_id=user_id,
                 product_id=product_id,
                 order_id=order_id,
@@ -292,15 +277,16 @@ async def create_review(
             ).returning(reviews.c.id)
         )
         review_id = result.scalar()
-        conn.commit()
+        await session.commit()
 
     reviews_created_total.labels(rating=str(rating), verified_purchase=str(is_verified_purchase)).inc()
     if photo_filenames:
         reviews_with_photos_total.inc()
 
     # Update average rating
-    with engine.connect() as conn:
-        avg = conn.execute(select(func.avg(reviews.c.rating)).where(reviews.c.product_id == product_id)).scalar()
+    async with async_session_maker() as session:
+        result = await session.execute(select(func.avg(reviews.c.rating)).where(reviews.c.product_id == product_id))
+        avg = result.scalar()
         average_product_rating.labels(product_id=str(product_id)).set(float(avg))
 
     calculate_storage_size()
@@ -338,8 +324,8 @@ async def get_reviews(
     offset = (page - 1) * limit
     query = query.limit(limit).offset(offset)
 
-    with engine.connect() as conn:
-        result = conn.execute(query)
+    async with async_session_maker() as session:
+        result = await session.execute(query)
         rows = [dict(row._mapping) for row in result]
 
     return [ReviewResponse(
@@ -358,8 +344,9 @@ async def get_reviews(
 @app.get("/reviews/{review_id}", response_model=ReviewResponse)
 async def get_review(review_id: int):
     query = select(reviews).where(reviews.c.id == review_id)
-    with engine.connect() as conn:
-        row = conn.execute(query).first()
+    async with async_session_maker() as session:
+        result = await session.execute(query)
+        row = result.first()
     if not row:
         raise HTTPException(status_code=404, detail="Review not found")
     r = dict(row._mapping)
@@ -380,8 +367,9 @@ async def get_review(review_id: int):
 async def delete_review(review_id: int):
     # Fetch review
     query = select(reviews).where(reviews.c.id == review_id)
-    with engine.connect() as conn:
-        row = conn.execute(query).first()
+    async with async_session_maker() as session:
+        result = await session.execute(query)
+        row = result.first()
     if not row:
         raise HTTPException(status_code=404, detail="Review not found")
     r = dict(row._mapping)
@@ -396,14 +384,15 @@ async def delete_review(review_id: int):
         if d.exists():
             d.rmdir()
     # Delete from DB
-    with engine.connect() as conn:
-        conn.execute(reviews.delete().where(reviews.c.id == review_id))
-        conn.commit()
+    async with async_session_maker() as session:
+        await session.execute(delete(reviews).where(reviews.c.id == review_id))
+        await session.commit()
     reviews_deleted_total.inc()
     calculate_storage_size()
     # Update average rating
-    with engine.connect() as conn:
-        avg = conn.execute(select(func.avg(reviews.c.rating)).where(reviews.c.product_id == r["product_id"])).scalar()
+    async with async_session_maker() as session:
+        result = await session.execute(select(func.avg(reviews.c.rating)).where(reviews.c.product_id == r["product_id"]))
+        avg = result.scalar()
         average_product_rating.labels(product_id=str(r["product_id"])).set(float(avg) if avg else 0)
     return {"message": "Review deleted successfully"}
 
@@ -423,8 +412,8 @@ async def get_product_reviews(
     offset = (page - 1) * limit
     query = query.limit(limit).offset(offset)
 
-    with engine.connect() as conn:
-        result = conn.execute(query)
+    async with async_session_maker() as session:
+        result = await session.execute(query)
         rows = [dict(row._mapping) for row in result]
 
     return [ReviewResponse(
@@ -443,10 +432,10 @@ async def get_product_reviews(
 @app.get("/products/{product_id}/rating")
 async def get_product_rating(product_id: int):
     """Get rating statistics for a product"""
-    with engine.connect() as conn:
+    async with async_session_maker() as session:
         # Все отзывы продукта
         query = select(reviews).where(reviews.c.product_id == product_id)
-        result = conn.execute(query)
+        result = await session.execute(query)
         product_reviews = [dict(r._mapping) for r in result]
 
     if not product_reviews:
