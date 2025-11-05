@@ -26,6 +26,22 @@ spec:
         volumeMounts:
           - name: reviews-storage
             mountPath: /app/uploads
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8004
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        readinessProbe:
+          httpGet:
+            path: /ready
+            port: 8004
+          initialDelaySeconds: 10
+          periodSeconds: 3
+          timeoutSeconds: 2
+          failureThreshold: 3
       volumes:
         - name: reviews-storage
           persistentVolumeClaim:
