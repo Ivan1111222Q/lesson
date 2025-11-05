@@ -6,6 +6,9 @@ from datetime import datetime
 import uvicorn
 import httpx
 import os
+from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Float, String, DateTime, JSON
+from sqlalchemy.exc import SQLAlchemyError
+from datetime import datetime
 import time
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
@@ -378,6 +381,7 @@ async def get_order(order_id: int):
 
 @app.patch("/orders/{order_id}/status")
 async def update_order_status(order_id: int, status: str):
+    """Обновление статуса заказа"""
     logger.info(
         "Updating order status",
         extra={"order_id": order_id, "new_status": status}

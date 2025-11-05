@@ -5,6 +5,25 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Профиль - Интернет-магазин</title>
     <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .order-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        .order-status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status-controls {
+            margin-top: 10px;
+        }
+        .status-controls select {
+            padding: 5px;
+            margin-right: 10px;
+        }
+    </style>
 </head>
 <body>
     <header>
@@ -117,16 +136,39 @@
                 }
 
                 container.innerHTML = orders.map(order => `
-                    <div class="order-card">
+                    <div class="order-card" id="order-${order.id}">
                         <h3>Заказ #${order.id}</h3>
-                        <div class="order-status status-${order.status}">${order.status}</div>
+                        <div class="order-status status-${order.status}" id="status-${order.id}">${order.status}</div>
                         <p>Дата: ${App.formatDate(order.created_at)}</p>
                         <p>Сумма: ${App.formatPrice(order.total)}</p>
                         <p>Товаров: ${order.items.length}</p>
+                        <div class="status-controls">
+                            <select id="status-select-${order.id}">
+                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>В обработке</option>
+                                <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Отправлен</option>
+                                <option value="completed" ${order.status === 'delivered' ? 'selected' : ''}>Выполнен</option>
+                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
+                            </select>
+                            <button onclick="changeOrderStatus(${order.id})">Изменить статус</button>
+                        </div>
                     </div>
                 `).join('');
             } catch (error) {
                 container.innerHTML = `<p class="error">Ошибка загрузки заказов: ${error.message}</p>`;
+            }
+        }
+
+        async function changeOrderStatus(orderId) {
+            const newStatus = document.getElementById(`status-select-${orderId}`).value;
+
+            try {
+                await OrdersAPI.updateStatus(orderId, newStatus);
+                const statusDiv = document.getElementById(`status-${orderId}`);
+                statusDiv.textContent = newStatus;
+                statusDiv.className = `order-status status-${newStatus}`;
+                App.showSuccess(`Статус заказа #${orderId} обновлен на "${newStatus}"`);
+            } catch (error) {
+                App.showError(`Не удалось изменить статус: ${error.message}`);
             }
         }
 
