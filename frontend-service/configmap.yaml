@@ -24,12 +24,19 @@ data:
             root /usr/share/nginx/html;
             index index.html;
 
+
             # Логирование
             access_log /dev/stdout;
             error_log /dev/stderr;
 
             location / {
                 try_files $uri $uri/ /index.html;
+            }
+
+            location /health {
+                access_log off;                    # Не логируем health checks
+                return 200 "healthy\n";           # Простой ответ
+                add_header Content-Type text/plain;
             }
 
             location /api/products/ {

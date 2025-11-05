@@ -42,6 +42,13 @@ spec:
           periodSeconds: 3
           timeoutSeconds: 2
           failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"
       volumes:
         - name: reviews-storage
           persistentVolumeClaim:
