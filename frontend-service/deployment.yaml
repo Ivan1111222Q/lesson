@@ -37,7 +37,14 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 3
           timeoutSeconds: 2
-          failureThreshold: 3       
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "1Gi"
+            cpu: "1500m"
+          limits:
+            memory: "3Gi"
+            cpu: "3000m"           
       volumes:
         - name: nginx-config
           configMap:

@@ -19,12 +19,15 @@ from metrics import (
     user_logins_total,
     user_logouts_total,
     active_users_gauge,
+    start_metrics_updater,
     HTTPClientMetrics
 )
 
 load_dotenv()
 
 app = FastAPI(title="Users Service")
+
+start_metrics_updater(interval=10)
 
 # CORS middleware
 app.add_middleware(

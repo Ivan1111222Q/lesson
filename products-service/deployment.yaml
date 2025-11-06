@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: products-service
-        image: products-service:4.0  
+        image: products-service:5.0  
         ports:
         - containerPort: 8001
         envFrom:
@@ -36,7 +36,14 @@ spec:
           initialDelaySeconds: 10
           periodSeconds: 3
           timeoutSeconds: 2
-          failureThreshold: 3        
+          failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"          
 
 ---
 apiVersion: v1

@@ -7,6 +7,7 @@ from datetime import datetime
 import uvicorn
 import httpx
 import os
+import threading
 import time
 import uuid
 import aiofiles
@@ -28,12 +29,16 @@ from metrics import (
     photos_deleted_total,
     photos_storage_size_bytes,
     average_product_rating,
+    start_metrics_updater,
     HTTPClientMetrics
 )
 
 load_dotenv()
 
 app = FastAPI(title="Reviews Service")
+
+start_metrics_updater(interval=10)
+
 
 # CORS middleware
 app.add_middleware(

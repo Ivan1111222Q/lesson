@@ -15,7 +15,7 @@ spec:
     spec:
       containers:
       - name: reviews-service
-        image: reviews-service:7.0
+        image: reviews-service:8.0
         ports:
         - containerPort: 8004
         envFrom:

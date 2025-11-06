@@ -17,12 +17,15 @@ from metrics import (
     products_stock_gauge,
     product_price_histogram,
     stock_updates_total,
+    start_metrics_updater,
     HTTPClientMetrics
 )
 
 load_dotenv()
 
 app = FastAPI(title="Products Service")
+
+start_metrics_updater(interval=10)
 
 # CORS middleware
 app.add_middleware(

@@ -12,3 +12,4 @@ SQLAlchemy
 databases
 python-dotenv
 psycopg2-binary
+psutil
