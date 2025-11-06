@@ -1,0 +1,21 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-config
+  namespace: lesson4356
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'fastapi'
+        metrics_path: /metrics
+        static_configs:
+          - targets: [ 'reviews-service:8005' ]
+          - targets: [ 'users-service:8003' ]
+          - targets: [ 'orders-service:8002' ]
+          - targets: [ 'products-service:8001' ]
+
+    rule_files:
+      - "/etc/prometheus/rules/rules.yml"

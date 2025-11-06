@@ -1,0 +1,205 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: prometheus-alert-rules
+  namespace: lesson4356
+data:
+  rules.yml: |
+    groups:
+      - name: users_service_alerts
+        rules:
+          - alert: HighUserRegistrationRate
+            expr: increase(users_registered_total[1m]) > 5
+            for: 2m
+            labels:
+              severity: warning
+              service: users-service
+            annotations:
+              summary: "Слишком много регистраций за последнюю минуту"
+              description: "Количество регистраций пользователей превысило 5 за последнюю минуту. Текущее значение: {{ $value }}"
+
+          - alert: HighLoginFailureRate
+            expr: increase(user_logins_total{result="failed"}[1m]) > 3
+            for: 2m
+            labels:
+              severity: warning
+              service: users-service
+            annotations:
+              summary: "Высокий процент неудачных логинов"
+              description: "Количество неуспешных попыток логина превысило 3 за последнюю минуту. Текущее значение: {{ $value }}"
+
+          - alert: ActiveUsersTooLow
+            expr: active_users_gauge < 1
+            for: 5m
+            labels:
+              severity: critical
+              service: users-service
+            annotations:
+              summary: "Нет активных пользователей"
+              description: "Количество активных пользователей упало ниже 1 на протяжении последних 5 минут. Текущее значение: {{ $value }}"
+
+          - alert: HighLogoutRate
+            expr: increase(user_logouts_total[1m]) > 5
+            for: 2m
+            labels:
+              severity: warning
+              service: users-service
+            annotations:
+              summary: "Слишком много выходов из системы"
+              description: "Количество логаутов пользователей превысило 5 за последнюю минуту. Текущее значение: {{ $value }}"
+
+          - alert: UsersServiceDown
+            expr: up{job="users-service"} == 0
+            for: 2m
+            labels:
+              severity: critical
+              service: users-service
+            annotations:
+              summary: "Сервис пользователей недоступен"
+              description: "Сервис users-service недоступен более 2 минут."
+
+          - alert: UsersServiceHighLatency
+            expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket{job="users-service"}[5m])) by (le)) > 0.5
+            for: 5m
+            labels:
+              severity: warning
+              service: users-service
+            annotations:
+              summary: "Высокая задержка ответа users-service"
+              description: "95-й процентиль времени ответа пользователей превышает 0.5 секунды."
+
+      - name: reviews_service_alerts
+        rules:
+          - alert: HighReviewsCreatedRate
+            expr: increase(reviews_created_total[1m]) > 5
+            for: 1m
+            labels:
+              severity: warning
+              service: reviews-service
+            annotations:
+              summary: "Слишком много новых отзывов за минуту"
+              description: "Количество созданных отзывов за последнюю минуту превысило 5. Текущее значение: {{ $value }}"
+
+          - alert: HighReviewsDeletedRate
+            expr: increase(reviews_deleted_total[1m]) > 2
+            for: 1m
+            labels:
+              severity: warning
+              service: reviews-service
+            annotations:
+              summary: "Слишком много удалённых отзывов за минуту"
+              description: "Количество удалённых отзывов за последнюю минуту превысило 2. Текущее значение: {{ $value }}"
+
+          - alert: HighPhotosUploadedRate
+            expr: increase(photos_uploaded_total[1m]) > 5
+            for: 1m
+            labels:
+              severity: warning
+              service: reviews-service
+            annotations:
+              summary: "Слишком много загруженных фото за минуту"
+              description: "Количество загруженных фото за последнюю минуту превысило 5. Текущее значение: {{ $value }}"
+
+          - alert: PhotosStorageLimitExceeded
+            expr: photos_storage_size_bytes > 1073741824
+            for: 5m
+            labels:
+              severity: critical
+              service: reviews-service
+            annotations:
+              summary: "Превышен лимит хранилища фото"
+              description: "Общий размер хранилища фото превысил 1 ГБ. Текущее значение: {{ $value }}"
+
+          - alert: LowAverageRating
+            expr: average_product_rating < 3
+            for: 5m
+            labels:
+              severity: warning
+              service: reviews-service
+            annotations:
+              summary: "Средний рейтинг продукта низкий"
+              description: "Средний рейтинг продукта опустился ниже 3. Текущее значение: {{ $value }}"
+
+      - name: products_service_alerts
+        rules:
+          - alert: HighProductCreationRate
+            expr: increase(products_created_total[1m]) > 5
+            for: 1m
+            labels:
+              severity: warning
+              service: products-service
+            annotations:
+              summary: "Слишком много созданных продуктов за минуту"
+              description: "Количество новых продуктов превысило 5 за последнюю минуту. Текущее значение: {{ $value }}"
+
+          - alert: HighProductDeletionRate
+            expr: increase(products_deleted_total[1m]) > 2
+            for: 1m
+            labels:
+              severity: warning
+              service: products-service
+            annotations:
+              summary: "Слишком много удалённых продуктов за минуту"
+              description: "Количество удалённых продуктов превысило 2 за последнюю минуту. Текущее значение: {{ $value }}"
+
+          - alert: LowStockProducts
+            expr: products_stock_gauge < 10
+            for: 5m
+            labels:
+              severity: critical
+              service: products-service
+            annotations:
+              summary: "Низкий уровень запасов на складе"
+              description: "Общее количество продуктов на складе упало ниже 10. Текущее значение: {{ $value }}"
+
+          - alert: HighPriceVariance
+            expr: histogram_quantile(0.95, sum(rate(product_price_histogram_bucket[5m])) by (le, category)) > 1000
+            for: 5m
+            labels:
+              severity: warning
+              service: products-service
+            annotations:
+              summary: "Сильные колебания цен"
+              description: "Цена продукта слишком резко отличается (95-й перцентиль > 1000)."
+
+      - name: orders_service_alerts
+        rules:
+          - alert: OrdersCreatedHigh
+            expr: rate(orders_created_total[5m]) > 50
+            for: 5m
+            labels:
+              severity: warning
+              service: orders-service
+            annotations:
+              summary: "Резкий рост новых заказов"
+              description: "Более 50 заказов созданы за последние 5 минут."
+
+          - alert: OrdersCancelledHigh
+            expr: rate(orders_cancelled_total[5m]) > 20
+            for: 5m
+            labels:
+              severity: warning
+              service: orders-service
+            annotations:
+              summary: "Много отмен заказов"
+              description: "Более 20 заказов были отменены за последние 5 минут."
+
+          - alert: RevenueDrop
+            expr: revenue_gauge < 1000
+            for: 10m
+            labels:
+              severity: critical
+              service: orders-service
+            annotations:
+              summary: "Снижение выручки"
+              description: "Общая выручка за последние 10 минут опустилась ниже 1000."
+
+          - alert: OrderStatusChangeHigh
+            expr: rate(order_status_changes_total[5m]) > 30
+            for: 5m
+            labels:
+              severity: info
+              service: orders-service
+            annotations:
+              summary: "Частые изменения статусов заказов"
+              description: "Более 30 изменений статусов заказов за последние 5 минут."
