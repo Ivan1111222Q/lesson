@@ -66,10 +66,7 @@ def start_metrics_updater(interval: int = 10):
     threading.Thread(target=loop, daemon=True).start()
 
 
-# -------------------
-# 📈 МЕТРИКИ ОТЗЫВОВ
-# -------------------
-
+# Reviews metrics
 reviews_created_total = Counter(
     'reviews_created_total',
     'Total number of reviews created',
@@ -86,10 +83,7 @@ reviews_with_photos_total = Counter(
     'Total number of reviews with photos'
 )
 
-# -------------------
-# 📸 МЕТРИКИ ФОТО
-# -------------------
-
+# Photos metrics
 photos_uploaded_total = Counter(
     'photos_uploaded_total',
     'Total number of photos uploaded'
@@ -105,20 +99,14 @@ photos_storage_size_bytes = Gauge(
     'Total size of stored photos in bytes'
 )
 
-# -------------------
-# ⭐ РЕЙТИНГ ПРОДУКТОВ
-# -------------------
-
+# Product rating metrics
 average_product_rating = Gauge(
     'average_product_rating',
     'Average rating for products',
     ['product_id']
 )
 
-# -------------------
-# 🌐 HTTP-КЛИЕНТ
-# -------------------
-
+# HTTP client metrics for inter-service calls
 http_client_request_duration = Histogram(
     'http_client_request_duration_seconds',
     'HTTP client request duration in seconds',
@@ -134,7 +122,7 @@ http_client_requests_total = Counter(
 
 
 class HTTPClientMetrics:
-    """Контекстный менеджер для замера метрик HTTP-запросов"""
+    """Context manager for tracking HTTP client metrics"""
 
     def __init__(self, target_service: str, method: str):
         self.target_service = target_service
