@@ -33,5 +33,19 @@ data:
           - targets: ['products-service:8001']
         scrape_interval: 5s
 
+      - job_name: 'frontend-service'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['frontend-service:80']
+        scrape_interval: 5s  
+          
+
+      - job_name: 'kube-metrics'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+        scrape_interval: 5s 
+
+
     rule_files:
       - "/etc/prometheus/rules/rules.yml"

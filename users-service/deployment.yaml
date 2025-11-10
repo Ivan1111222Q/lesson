@@ -31,14 +31,14 @@ spec:
           periodSeconds: 5
           timeoutSeconds: 2
           failureThreshold: 3
-        readinessProbe:
-          httpGet:
-            path: /ready
-            port: 8003
-          initialDelaySeconds: 10
-          periodSeconds: 3
-          timeoutSeconds: 2
-          failureThreshold: 3
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ready
+        #     port: 8003
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 3
+        #   timeoutSeconds: 2
+        #   failureThreshold: 3
         resources:
           requests:
             memory: "256Mi"
