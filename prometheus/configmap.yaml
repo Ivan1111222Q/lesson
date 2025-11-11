@@ -31,13 +31,7 @@ data:
         metrics_path: /metrics
         static_configs:
           - targets: ['products-service:8001']
-        scrape_interval: 5s
-
-      - job_name: 'frontend-service'
-        metrics_path: /metrics
-        static_configs:
-          - targets: ['frontend-service:80']
-        scrape_interval: 5s  
+        scrape_interval: 5s 
           
 
       - job_name: 'kube-metrics'
@@ -45,6 +39,28 @@ data:
         static_configs:
           - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
         scrape_interval: 5s 
+
+        
+      - job_name: envoy-stats
+        metrics_path: /stats/prometheus
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: keep
+            regex: istio-proxy
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:15090
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+      
 
 
     rule_files:

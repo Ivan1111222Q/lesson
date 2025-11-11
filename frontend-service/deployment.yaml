@@ -12,6 +12,8 @@ spec:
     metadata:
       labels:
         app: frontend-service
+      annotations:
+        prometheus.io/scrape: "false"    
     spec:
       containers:
       - name: frontend-service

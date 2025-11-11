@@ -50,6 +50,12 @@ data:
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
+            
+            location /metrics {
+                access_log off;
+                default_type text/plain;
+                return 200 "# HELP nginx_up Status of nginx\n# TYPE nginx_up gauge\nnginx_up 1\n";
+            }
 
             location /api/users/ {
                 proxy_pass http://users-service:8003;
