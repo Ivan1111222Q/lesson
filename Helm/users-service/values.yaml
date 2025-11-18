@@ -1,0 +1,58 @@
+# Общие настройки
+namespace: lesson4356
+image:
+  repository: users-service
+  tag: "4.0"
+  pullPolicy: IfNotPresent
+
+# Конфигурация Deployment
+replicaCount: 1
+
+service:
+  type: NodePort
+  port: 8003
+  targetPort: 8003
+  nodePort: 30003
+
+# Настройки приложения
+config:
+  ORDERS_SERVICE_URL: "http://orders-service:8002"
+  REVIEWS_SERVICE_URL: "http://reviews-service:8004"
+  PORT: "8003"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+
+secrets:
+  TEST_USER_PASSWORD: "cGFzc3dvcmQxMjM="
+  TEST_USER_NAME: "Sm9obiBEb2U="
+  TEST_USER_EMAIL: "dXNlckBleGFtcGxlLmNvbQ=="
+
+# Ресурсы
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"
+
+# Probes
+livenessProbe:
+  path: /live
+  port: 8003
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  path: /ready
+  port: 8003
+  initialDelaySeconds: 10
+  periodSeconds: 3
+  timeoutSeconds: 2
+  failureThreshold: 3
+  enabled: false
+
+ 

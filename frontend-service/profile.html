@@ -19,10 +19,6 @@
         .status-controls {
             margin-top: 10px;
         }
-        .status-controls select {
-            padding: 5px;
-            margin-right: 10px;
-        }
     </style>
 </head>
 <body>
@@ -135,40 +131,48 @@
                     return;
                 }
 
-                container.innerHTML = orders.map(order => `
+                container.innerHTML = orders.map(order => {
+                    const statusText = {
+                        'pending': 'В обработке',
+                        'processing': 'Обрабатывается',
+                        'shipped': 'Отправлен',
+                        'delivered': 'Доставлен',
+                        'cancelled': 'Отменен'
+                    }[order.status] || order.status;
+                    
+                    const canCancel = order.status === 'pending' || order.status === 'processing';
+                    
+                    return `
                     <div class="order-card" id="order-${order.id}">
                         <h3>Заказ #${order.id}</h3>
-                        <div class="order-status status-${order.status}" id="status-${order.id}">${order.status}</div>
+                        <div class="order-status status-${order.status}" id="status-${order.id}">Статус: ${statusText}</div>
                         <p>Дата: ${App.formatDate(order.created_at)}</p>
                         <p>Сумма: ${App.formatPrice(order.total)}</p>
                         <p>Товаров: ${order.items.length}</p>
-                        <div class="status-controls">
-                            <select id="status-select-${order.id}">
-                                <option value="pending" ${order.status === 'pending' ? 'selected' : ''}>В обработке</option>
-                                <option value="shipped" ${order.status === 'shipped' ? 'selected' : ''}>Отправлен</option>
-                                <option value="completed" ${order.status === 'delivered' ? 'selected' : ''}>Выполнен</option>
-                                <option value="cancelled" ${order.status === 'cancelled' ? 'selected' : ''}>Отменен</option>
-                            </select>
-                            <button onclick="changeOrderStatus(${order.id})">Изменить статус</button>
-                        </div>
+                        ${canCancel ? `
+                            <div class="status-controls">
+                                <button onclick="cancelOrder(${order.id})" style="background-color: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Отменить заказ</button>
+                            </div>
+                        ` : ''}
                     </div>
-                `).join('');
+                `;
+                }).join('');
             } catch (error) {
                 container.innerHTML = `<p class="error">Ошибка загрузки заказов: ${error.message}</p>`;
             }
         }
 
-        async function changeOrderStatus(orderId) {
-            const newStatus = document.getElementById(`status-select-${orderId}`).value;
+        async function cancelOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
+                return;
+            }
 
             try {
-                await OrdersAPI.updateStatus(orderId, newStatus);
-                const statusDiv = document.getElementById(`status-${orderId}`);
-                statusDiv.textContent = newStatus;
-                statusDiv.className = `order-status status-${newStatus}`;
-                App.showSuccess(`Статус заказа #${orderId} обновлен на "${newStatus}"`);
+                const result = await OrdersAPI.cancel(orderId);
+                App.showSuccess(`Заказ #${orderId} успешно отменен. Товары возвращены на склад.`);
+                await loadOrders(); // Перезагружаем список заказов
             } catch (error) {
-                App.showError(`Не удалось изменить статус: ${error.message}`);
+                App.showError(`Не удалось отменить заказ: ${error.message}`);
             }
         }
 

@@ -1,0 +1,64 @@
+config:
+  USERS_SERVICE_URL: "http://users-service:8003"
+  PRODUCTS_SERVICE_URL: "http://products-service:8001"
+  ORDERS_SERVICE_URL: "http://orders-service:8002"
+  PORT: "8004"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  POSTGRES_DB: "reviews"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+
+
+namespace: lesson4356
+image:
+  repository: reviews-service
+  tag: "8.0"
+  pullPolicy: IfNotPresent
+
+service:
+  type: NodePort
+  port: 8004
+  targetPort: 8004
+  nodePort: 30009
+
+replicaCount: 1
+
+secrets:
+  POSTGRES_USER: "dXNlcg=="           
+  POSTGRES_PASSWORD: "cGFzc3dvcmQ="
+
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"
+
+livenessProbe:
+  path: /live
+  port: 8004
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  path: /ready
+  port: 8004
+  initialDelaySeconds: 10
+  periodSeconds: 3
+  timeoutSeconds: 2
+  failureThreshold: 3
+  enabled: false    
+
+
+persistentVolumeClaim:
+  enabled: true
+  name: reviews-pvc
+  storage: 1Gi
+  accessModes:
+    - ReadWriteOnce  

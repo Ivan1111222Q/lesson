@@ -69,3 +69,9 @@ data:
 
     rule_files:
       - "/etc/prometheus/rules/rules.yml"
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093  

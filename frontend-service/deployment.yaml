@@ -17,7 +17,7 @@ spec:
     spec:
       containers:
       - name: frontend-service
-        image: frontend-service:2.0    
+        image: frontend-service:4.0    
         ports:
         - containerPort: 80
         volumeMounts:

@@ -1,0 +1,43 @@
+namespace: lesson4356
+
+image:
+  repository: frontend-service
+  tag: "4.0"
+  pullPolicy: IfNotPresent
+
+replicaCount: 1
+
+service:
+  type: NodePort
+  port: 80
+  targetPort: 80
+  nodePort: 30008
+
+# Убрали многострочный nginx.conf из values.yaml
+# Теперь он напрямую в templates/configmap.yaml
+
+livenessProbe:
+  path: /health
+  port: 80
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  path: /health
+  port: 80
+  initialDelaySeconds: 10
+  periodSeconds: 3
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"
+
+prometheusScrape: false

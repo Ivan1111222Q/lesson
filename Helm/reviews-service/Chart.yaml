@@ -1,0 +1,5 @@
+apiVersion: v2
+name: reviews-service
+description: Users Service Helm Chart
+version: 0.1.0
+appVersion: "8.0"
