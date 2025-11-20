@@ -1,0 +1,26 @@
+namespace: lesson4356
+
+image:
+  repository: grafana/grafana-oss
+  tag: "latest"
+
+replicaCount: 1
+
+service:
+  type: NodePort
+  port: 3000
+  targetPort: 3000
+  nodePort: 30300
+
+admin:
+  user: "admin"
+  password: "admin"
+
+persistence:
+  enabled: true
+  existingClaim: "grafana-pvc"
+
+datasources:
+  prometheus:
+    url: "http://prometheus-service:9090"
+    isDefault: true

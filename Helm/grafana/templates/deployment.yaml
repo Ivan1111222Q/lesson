@@ -1,0 +1,43 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .Chart.Name }}
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: {{ .Chart.Name }}
+  template:
+    metadata:
+      labels:
+        app: {{ .Chart.Name }}
+    spec:
+      containers:
+        - name: {{ .Chart.Name }}
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          ports:
+            - containerPort: {{ .Values.service.targetPort }}
+          env:
+            - name: GF_SECURITY_ADMIN_USER
+              value: {{ .Values.admin.user | quote }}
+            - name: GF_SECURITY_ADMIN_PASSWORD
+              value: {{ .Values.admin.password | quote }}
+          volumeMounts:
+            - name: datasources
+              mountPath: /etc/grafana/provisioning/datasources
+            {{- if .Values.persistence.enabled }}
+            - name: grafana-storage
+              mountPath: /var/lib/grafana
+            {{- end }}
+      volumes:
+        - name: datasources
+          configMap:
+            name: {{ .Chart.Name }}-datasources
+        {{- if .Values.persistence.enabled }}
+        - name: grafana-storage
+          persistentVolumeClaim:
+            claimName: {{ .Values.persistence.existingClaim }}
+        {{- end }}

@@ -15,7 +15,6 @@ namespace: lesson4356
 image:
   repository: reviews-service
   tag: "8.0"
-  pullPolicy: IfNotPresent
 
 service:
   type: NodePort

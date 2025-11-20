@@ -3,9 +3,6 @@ kind: Deployment
 metadata:
   name: {{ .Chart.Name }}-deployment
   namespace: {{ .Values.namespace }}
-  labels:
-    app: {{ .Chart.Name }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 spec:
   replicas: {{ .Values.replicaCount }}
   selector:
@@ -24,8 +21,6 @@ spec:
         envFrom:
         - configMapRef:
             name: {{ .Chart.Name }}-config
-        - secretRef:
-            name: {{ .Chart.Name }}-secret
         {{- if .Values.livenessProbe }}
         livenessProbe:
           httpGet:
@@ -36,16 +31,15 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
         {{- end }}
-        # {{- if .Values.readinessProbe.enabled }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: {{ .Values.readinessProbe.path }}
-        #     port: {{ .Values.readinessProbe.port }}
-        #   initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-        #   failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.readinessProbe.path }}
+            port: {{ .Values.readinessProbe.port }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-            

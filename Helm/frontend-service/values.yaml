@@ -3,7 +3,7 @@ namespace: lesson4356
 image:
   repository: frontend-service
   tag: "4.0"
-  pullPolicy: IfNotPresent
+  
 
 replicaCount: 1
 

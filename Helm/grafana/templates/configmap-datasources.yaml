@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-datasources
+  namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+data:
+  prometheus-datasource.yaml: |
+    apiVersion: 1
+    datasources:
+      - name: Prometheus
+        type: prometheus
+        uid: prometheus
+        access: proxy
+        url: {{ .Values.datasources.prometheus.url }}
+        isDefault: {{ .Values.datasources.prometheus.isDefault }}

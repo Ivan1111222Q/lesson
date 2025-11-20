@@ -39,13 +39,13 @@ data:
             }
 
             location /api/products/ {
-                proxy_pass http://products-service:8001;
+                proxy_pass http://products-service-service:8001;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
 
             location /api/orders/ {
-                proxy_pass http://orders-service:8002;
+                proxy_pass http://orders-service-service:8002;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }

@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ .Chart.Name }}-config
+  namespace: {{ .Values.namespace }}
+data:
+  prometheus.yml: |
+    global:
+      scrape_interval: 15s
+
+    scrape_configs:
+      - job_name: 'reviews-service'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['reviews-service-service:8004']
+        scrape_interval: 5s
+
+      - job_name: 'users-service'
+        metrics_path: /metrics  
+        static_configs:
+          - targets: ['users-service-service:8003']
+        scrape_interval: 5s
+
+      - job_name: 'orders-service'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['orders-service-service:8002']
+        scrape_interval: 5s
+
+      - job_name: 'products-service'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['products-service-service:8001']
+        scrape_interval: 5s 
+
+      - job_name: 'kube-metrics'
+        metrics_path: /metrics
+        static_configs:
+          - targets: ['kube-state-metrics.monitoring.svc.cluster.local:8080']
+        scrape_interval: 5s 
+     
+      - job_name: 'node-exporter'
+        static_configs:
+          - targets: ['node-exporter.monitoring.svc.cluster.local:9100']
+        scrape_interval: 30s
+        
+      - job_name: envoy-stats
+        metrics_path: /stats/prometheus
+        kubernetes_sd_configs:
+          - role: pod
+        relabel_configs:
+          - source_labels: [__meta_kubernetes_pod_container_name]
+            action: keep
+            regex: istio-proxy
+          - source_labels: [__address__]
+            action: replace
+            regex: ([^:]+)(?::\d+)?
+            replacement: $1:15090
+            target_label: __address__
+          - action: labelmap
+            regex: __meta_kubernetes_pod_label_(.+)
+          - source_labels: [__meta_kubernetes_namespace]
+            target_label: namespace
+          - source_labels: [__meta_kubernetes_pod_name]
+            target_label: pod
+
+    rule_files:
+      - "/etc/prometheus/rules/rules.yml"
+
+    alerting:
+      alertmanagers:
+        - static_configs:
+            - targets:
+              - alertmanager:9093
