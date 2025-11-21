@@ -36,15 +36,15 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
         {{- end }}
-        # {{- if .Values.readinessProbe.enabled }}
-        # readinessProbe:
-        #   httpGet:
-        #     path: {{ .Values.readinessProbe.path }}
-        #     port: {{ .Values.readinessProbe.port }}
-        #   initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
-        #   periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
-        #   timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
-        #   failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+        {{- if .Values.readinessProbe.enabled }}
+        readinessProbe:
+          httpGet:
+            path: {{ .Values.readinessProbe.path }}
+            port: {{ .Values.readinessProbe.port }}
+          initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+          periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+          timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+          failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
