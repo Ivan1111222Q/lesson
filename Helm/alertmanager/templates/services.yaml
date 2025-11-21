@@ -71,5 +71,6 @@ spec:
     {{- with .Values.service.extraPorts }}
     {{- toYaml . | nindent 4 }}
     {{- end }}
+      nodePort: {{ .Values.service.nodePort }}
   selector:
     {{- include "alertmanager.selectorLabels" . | nindent 4 }}

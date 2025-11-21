@@ -118,7 +118,8 @@ service:
   port: 9093
   clusterPort: 9094
   loadBalancerIP: ""  # Assign ext IP when Service type is LoadBalancer
-  loadBalancerSourceRanges: []  # Only allow access to loadBalancerIP from these IPs
+  loadBalancerSourceRanges: []
+  # Only allow access to loadBalancerIP from these IPs
   # if you want to force a specific nodePort. Must be use with service.type=NodePort
   # nodePort:
 

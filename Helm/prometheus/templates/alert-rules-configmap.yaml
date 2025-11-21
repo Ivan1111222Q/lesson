@@ -19,14 +19,14 @@ data:
               description: "Количество регистраций пользователей превысило 5 за последнюю минуту"
 
           - alert: HighLoginFailureRate
-            expr: increase(user_logins_total{result="failed"}[1m]) > 3
-            for: 2m
+            expr: increase(user_logins_total{result="failed"}[1m]) > 5
+            for: 1m
             labels:
               severity: warning
               service: users-service
             annotations:
               summary: "Высокий процент неудачных логинов"
-              description: "Количество неуспешных попыток логина превысило 3 за последнюю минуту"
+              description: "Количество неуспешных попыток логина превысило 5 за последнюю минуту"
 
           - alert: ActiveUsersTooLow
             expr: active_users_gauge < 1
