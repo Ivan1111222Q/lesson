@@ -1,7 +1,7 @@
 namespace: lesson4356
 
 image:
-  repository: frontend-service
+  repository: cr.yandex/crpiqtsurn6alildl4cb/frontend-service
   tag: "4.0"
   
 

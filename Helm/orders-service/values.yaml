@@ -1,6 +1,6 @@
 namespace: lesson4356
 image:
-  repository: orders-service
+  repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
   tag: "5.0"
 
 service:
@@ -9,6 +9,13 @@ service:
   port      : 8002         
   targetPort: 8002         
   nodePort  : 30002
+
+ports:
+  - name: http-metrics    # ← Имя порта для ServiceMonitor
+    port: 8002
+    targetPort: 8002
+    protocol: TCP
+    nodePort: 30002    
 
 replicaCount: 1
 
@@ -46,4 +53,3 @@ readinessProbe:
   failureThreshold: 3
   enabled: false         
 
-  

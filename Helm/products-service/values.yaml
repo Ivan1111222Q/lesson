@@ -1,6 +1,6 @@
 namespace: lesson4356
 image:
-  repository: products-service
+  repository: cr.yandex/crpiqtsurn6alildl4cb/products-service
   tag: "5.0"
 
 
@@ -10,6 +10,13 @@ service:
   port      : 8001         
   targetPort: 8001         
   nodePort  : 30001
+
+ports:
+  - name: http-metrics    # ← Имя порта для ServiceMonitor
+    port: 8001
+    targetPort: 8001
+    protocol: TCP
+    nodePort: 30001   
 
 replicaCount: 1
 

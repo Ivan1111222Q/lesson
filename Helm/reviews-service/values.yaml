@@ -13,7 +13,7 @@ config:
 
 namespace: lesson4356
 image:
-  repository: reviews-service
+  repository: cr.yandex/crpiqtsurn6alildl4cb/reviews-service
   tag: "8.0"
 
 service:
@@ -21,6 +21,13 @@ service:
   port: 8004
   targetPort: 8004
   nodePort: 30009
+
+ports:
+  - name: http-metrics    # ← Имя порта для ServiceMonitor
+    port: 8004
+    targetPort: 8004
+    protocol: TCP
+    nodePort: 30009   
 
 replicaCount: 1
 
@@ -60,4 +67,4 @@ persistentVolumeClaim:
   name: reviews-pvc
   storage: 1Gi
   accessModes:
-    - ReadWriteOnce  
+    - ReadWriteOnce    

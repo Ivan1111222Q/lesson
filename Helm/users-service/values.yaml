@@ -1,7 +1,7 @@
 # Общие настройки
 namespace: lesson4356
 image:
-  repository: users-service
+  repository: cr.yandex/crpiqtsurn6alildl4cb/users-service
   tag: "4.0"
 
 # Конфигурация Deployment
