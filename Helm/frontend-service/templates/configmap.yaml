@@ -39,13 +39,15 @@ data:
             }
 
             location /api/products/ {
+                proxy_http_version 1.1;
+                rewrite ^/api/products/(.*) /\$1 break;
                 proxy_pass http://products-service-service:8001;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
 
             location /api/orders/ {
-                proxy_pass http://orders-service-service:8002;
+                proxy_pass http://orders-service-service:8002/;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
@@ -57,13 +59,13 @@ data:
             }
 
             location /api/users/ {
-                proxy_pass http://users-service-service:8003;
+                proxy_pass http://users-service-service:8003/;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
 
             location /api/reviews/ {
-                proxy_pass http://reviews-service-service:8004;
+                proxy_pass http://reviews-service-service:8004/;
                 proxy_set_header Host $host;
                 proxy_set_header X-Real-IP $remote_addr;
             }
