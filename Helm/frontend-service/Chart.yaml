@@ -2,4 +2,4 @@ apiVersion: v2
 name: frontend-service
 description: Frontend Service Helm Chart
 version: 0.1.0
-appVersion: "7.0"
+appVersion: "6.0"

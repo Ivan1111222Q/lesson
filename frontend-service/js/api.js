@@ -1,6 +1,6 @@
 // API Configuration
 const API_BASE = {
-    products: '/api/products',
+    products: '/api',
     orders: '/api/orders',
     users: '/api/users',
     reviews: '/api/reviews'
