@@ -1,43 +1,38 @@
-namespace: lesson4356
-
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/frontend-service
-  tag: "6.0"
-  
+  tag: '2.11'
+
+livenessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 15
+  path: /health
+  periodSeconds: 5
+  port: 80
+  timeoutSeconds: 2
+
+namespace: lesson4356
+prometheusScrape: false
+
+readinessProbe:
+  failureThreshold: 3
+  initialDelaySeconds: 10
+  path: /health
+  periodSeconds: 3
+  port: 80
+  timeoutSeconds: 2
 
 replicaCount: 1
 
+resources:
+  limits:
+    cpu: 1000m
+    memory: 512Mi
+  requests:
+    cpu: 250m
+    memory: 256Mi
+
 service:
-  type: NodePort
+  nodePort: 30008
   port: 80
   targetPort: 80
-  nodePort: 30008
-
-# Убрали многострочный nginx.conf из values.yaml
-# Теперь он напрямую в templates/configmap.yaml
-
-livenessProbe:
-  path: /health
-  port: 80
-  initialDelaySeconds: 15
-  periodSeconds: 5
-  timeoutSeconds: 2
-  failureThreshold: 3
-
-readinessProbe:
-  path: /health
-  port: 80
-  initialDelaySeconds: 10
-  periodSeconds: 3
-  timeoutSeconds: 2
-  failureThreshold: 3
-
-resources:
-  requests:
-    memory: "256Mi"
-    cpu: "250m"
-  limits:
-    memory: "512Mi"
-    cpu: "1000m"
-
-prometheusScrape: false
+  type: NodePort

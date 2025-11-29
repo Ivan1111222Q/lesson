@@ -1,9 +1,9 @@
 // API Configuration
 const API_BASE = {
     products: '/api',
-    orders: '/api/orders',
-    users: '/api/users',
-    reviews: '/api/reviews'
+    orders: '/api',
+    users: '/api',
+    reviews: '/api'
 };
 
 // Helper function to make API requests
