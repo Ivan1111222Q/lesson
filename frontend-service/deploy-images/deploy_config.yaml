@@ -6,5 +6,5 @@ helm_namespace: lesson4356
 helm_release: frontend-service
 image: frontend-service
 registry: cr.yandex/crpiqtsurn6alildl4cb
-tag: '2.11'
+tag: '2.12'
 update_values: true

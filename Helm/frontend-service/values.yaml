@@ -1,6 +1,6 @@
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/frontend-service
-  tag: '2.11'
+  tag: '2.12'
 
 livenessProbe:
   failureThreshold: 3
