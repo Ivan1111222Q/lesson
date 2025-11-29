@@ -4868,24 +4868,27 @@ prometheus:
     # attachMetadata:
     #   node: true
 
-  additionalPodMonitors: []
+  additionalPodMonitors: 
 
-    # - name: "users-service-monitor"
-    #   namespace: lesson4356
-    #   labels:
-    #     release: kube-prometheus-stack
-    #   spec:
-    #     namespaceSelector:
-    #       matchNames:
-    #       - lesson4356
-    #     selector:
-    #       matchLabels:
-    #         app: users-service
-    #     endpoints:
-    #     - port: http  # ← используем имя порта "http"
-    #       path: /metrics
-    #       interval: 15s
-    #       scrapeTimeout: 10s
+    - name: "istio-proxies"
+      selector:
+        matchLabels:
+          security.istio.io/tlsMode: istio
+      namespaceSelector:
+        any: true
+      podMetricsEndpoints:
+      - port: http-envoy-prom
+        path: /stats/prometheus
+        interval: 15s
+      relabelings:
+      - sourceLabels: [__meta_kubernetes_pod_container_name]
+        action: keep
+        regex: "istio-proxy"
+      - sourceLabels: [__meta_kubernetes_pod_container_port_name]
+        action: keep
+        regex: "http-envoy-prom"
+      additionalLabels:
+        release: kube-prometheus-stack  
 
     # - name: "istio-proxies"
     #   selector:
