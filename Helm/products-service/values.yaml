@@ -22,7 +22,7 @@ replicaCount: 1
 
 
 config:
-  ORDERS_SERVICE_URL: "http://orders-service:8002"
+  ORDERS_SERVICE_URL: "http://orders-service-service:8002"
   PORT: "8001"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"

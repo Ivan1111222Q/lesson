@@ -1,7 +1,7 @@
 config:
-  USERS_SERVICE_URL: "http://users-service:8003"
-  PRODUCTS_SERVICE_URL: "http://products-service:8001"
-  ORDERS_SERVICE_URL: "http://orders-service:8002"
+  USERS_SERVICE_URL: "http://users-service-service:8003"
+  PRODUCTS_SERVICE_URL: "http://products-service-service:8001"
+  ORDERS_SERVICE_URL: "http://orders-service-service:8002"
   PORT: "8004"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"

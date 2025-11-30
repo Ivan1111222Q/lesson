@@ -21,8 +21,8 @@ replicaCount: 1
 
 
 config:
-  PRODUCTS_SERVICE_URL: "http://products-service:8001"
-  USERS_SERVICE_URL: "http://users-service:8003"
+  PRODUCTS_SERVICE_URL: "http://products-service-service:8001"
+  USERS_SERVICE_URL: "http://users-service-service:8003"
   PORT: "8002"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"

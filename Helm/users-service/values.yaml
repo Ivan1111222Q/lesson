@@ -13,10 +13,17 @@ service:
   targetPort: 8003
   nodePort: 30003
 
+ports:
+  - name: http-metrics    # ← Имя порта для ServiceMonitor
+    port: 8003
+    targetPort: 8003
+    protocol: TCP
+    nodePort: 30003  
+
 # Настройки приложения
 config:
-  ORDERS_SERVICE_URL: "http://orders-service:8002"
-  REVIEWS_SERVICE_URL: "http://reviews-service:8004"
+  ORDERS_SERVICE_URL: "http://orders-service-service:8002"
+  REVIEWS_SERVICE_URL: "http://reviews-service-service:8004"
   PORT: "8003"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
