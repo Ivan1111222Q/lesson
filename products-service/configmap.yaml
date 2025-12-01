@@ -5,6 +5,9 @@ metadata:
   namespace: lesson4356
 data:
   ORDERS_SERVICE_URL: "http://orders-service:8002"
+  POSTGRES_DB: "reviews"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
   PORT: "8001"
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"

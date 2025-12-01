@@ -6,10 +6,8 @@ from datetime import datetime
 import uvicorn
 import httpx
 import os
-from sqlalchemy import create_engine, MetaData, Table, Column, Integer, Float, String, DateTime, JSON
-from sqlalchemy.exc import SQLAlchemyError
-from datetime import datetime
 import time
+
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
@@ -22,8 +20,11 @@ from metrics import (
     revenue_gauge,
     order_status_changes_total,
     start_metrics_updater,
-    HTTPClientMetrics
+    HTTPClientMetrics,
 )
+from sqlalchemy import select, insert, update, delete
+
+from database import async_session_maker, orders, init_db, fetch_order
 
 load_dotenv()
 
@@ -49,9 +50,13 @@ PRODUCTS_SERVICE_URL = os.getenv("PRODUCTS_SERVICE_URL", "http://products-servic
 USERS_SERVICE_URL = os.getenv("USERS_SERVICE_URL", "http://users-service:8003")
 PORT = int(os.getenv("PORT", "8002"))
 
-# In-memory database for demo
-orders_db = {}
-order_id_counter = 1
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Initialize orders database on startup."""
+    logger.info("Initializing orders database...")
+    await init_db()
+    logger.info("Orders database initialized successfully")
 
 
 class OrderItem(BaseModel):
@@ -171,8 +176,6 @@ async def readiness_check():
 
 @app.post("/orders", response_model=OrderResponse)
 async def create_order(order: Order):
-    global order_id_counter
-
     logger.info(
         "Creating order",
         extra={
@@ -313,12 +316,22 @@ async def create_order(order: Order):
                     detail="Products service unavailable"
                 )
 
-    order_id = order_id_counter
-    order_data = order.model_dump()
-    order_data["created_at"] = datetime.now().isoformat()
-    order_data["total"] = total
-    orders_db[order_id] = order_data
-    order_id_counter += 1
+    # Persist order in PostgreSQL
+    async with async_session_maker() as session:
+        stmt = (
+            insert(orders)
+            .values(
+                user_id=order.user_id,
+                items=[item.model_dump() for item in order.items],
+                status=order.status,
+                total=total,
+                created_at=datetime.now(),
+            )
+            .returning(orders.c.id)
+        )
+        result = await session.execute(stmt)
+        order_id = result.scalar()
+        await session.commit()
 
     # Update Prometheus metrics
     orders_created_total.labels(status=order.status).inc()
@@ -333,10 +346,17 @@ async def create_order(order: Order):
             "user_id": order.user_id,
             "total": total,
             "items_count": len(order.items),
-        }
+        },
     )
 
-    return {"id": order_id, **orders_db[order_id]}
+    return {
+        "id": order_id,
+        "user_id": order.user_id,
+        "items": [item.model_dump() for item in order.items],
+        "status": order.status,
+        "total": total,
+        "created_at": datetime.now().isoformat(),
+    }
 
 
 @app.get("/orders", response_model=List[OrderResponse])
@@ -346,27 +366,45 @@ async def get_orders(user_id: Optional[int] = None):
         extra={"user_id_filter": user_id if user_id else "all"}
     )
 
-    orders = []
-    for order_id, order in orders_db.items():
-        if user_id is None or order.get("user_id") == user_id:
-            orders.append({"id": order_id, **order})
+    async with async_session_maker() as session:
+        stmt = select(orders)
+        if user_id is not None:
+            stmt = stmt.where(orders.c.user_id == user_id)
+        result = await session.execute(stmt)
+        rows = [dict(row._mapping) for row in result]
+
+    response: List[Dict[str, Any]] = []
+    for row in rows:
+        response.append(
+        {
+            "id": row["id"],
+            "user_id": row["user_id"],
+            "items": row["items"],
+            "status": row["status"],
+            "total": row["total"],
+            "created_at": row["created_at"].isoformat() if isinstance(row["created_at"], datetime) else row["created_at"],
+        }
+    )
 
     logger.info(
         "Orders retrieved",
         extra={
-            "orders_count": len(orders),
+            "orders_count": len(response),
             "user_id_filter": user_id if user_id else "all",
-        }
+        },
     )
 
-    return orders
+    return response
 
 
 @app.get("/orders/{order_id}", response_model=OrderResponse)
 async def get_order(order_id: int):
     logger.info("Fetching order", extra={"order_id": order_id})
 
-    if order_id not in orders_db:
+    async with async_session_maker() as session:
+        data = await fetch_order(session, order_id)
+
+    if not data:
         logger.warning("Order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
 
@@ -374,12 +412,19 @@ async def get_order(order_id: int):
         "Order retrieved",
         extra={
             "order_id": order_id,
-            "user_id": orders_db[order_id]["user_id"],
-            "status": orders_db[order_id]["status"],
-        }
+            "user_id": data["user_id"],
+            "status": data["status"],
+        },
     )
 
-    return {"id": order_id, **orders_db[order_id]}
+    return {
+        "id": data["id"],
+        "user_id": data["user_id"],
+        "items": data["items"],
+        "status": data["status"],
+        "total": data["total"],
+        "created_at": data["created_at"].isoformat() if isinstance(data["created_at"], datetime) else data["created_at"],
+    }
 
 
 @app.patch("/orders/{order_id}/status")
@@ -390,9 +435,12 @@ async def update_order_status(order_id: int, status: str):
         extra={"order_id": order_id, "new_status": status}
     )
 
-    if order_id not in orders_db:
-        logger.warning("Status update failed - order not found", extra={"order_id": order_id})
-        raise HTTPException(status_code=404, detail="Order not found")
+    async with async_session_maker() as session:
+        data = await fetch_order(session, order_id)
+
+        if not data:
+            logger.warning("Status update failed - order not found", extra={"order_id": order_id})
+            raise HTTPException(status_code=404, detail="Order not found")
 
     valid_statuses = ["pending", "processing", "shipped", "delivered", "cancelled"]
     if status not in valid_statuses:
@@ -402,8 +450,16 @@ async def update_order_status(order_id: int, status: str):
         )
         raise HTTPException(status_code=400, detail="Invalid status")
 
-    old_status = orders_db[order_id]["status"]
-    orders_db[order_id]["status"] = status
+    old_status = data["status"]
+
+    async with async_session_maker() as session:
+        stmt = (
+            update(orders)
+            .where(orders.c.id == order_id)
+            .values(status=status)
+        )
+        await session.execute(stmt)
+        await session.commit()
 
     # Update Prometheus metrics
     order_status_changes_total.labels(
@@ -425,11 +481,12 @@ async def update_order_status(order_id: int, status: str):
 
 @app.post("/orders/{order_id}/cancel")
 async def cancel_order(order_id: int):
-    if order_id not in orders_db:
+    async with async_session_maker() as session:
+        order = await fetch_order(session, order_id)
+
+    if not order:
         logger.warning("Cancel order failed - order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
-
-    order = orders_db[order_id]
 
     logger.info(
         "Cancelling order",
@@ -502,8 +559,16 @@ async def cancel_order(order_id: int):
                 )
 
     # Update order status to cancelled
-    old_status = orders_db[order_id]["status"]
-    orders_db[order_id]["status"] = "cancelled"
+    old_status = order["status"]
+
+    async with async_session_maker() as session:
+        stmt = (
+            update(orders)
+            .where(orders.c.id == order_id)
+            .values(status="cancelled")
+        )
+        await session.execute(stmt)
+        await session.commit()
 
     # Update Prometheus metrics
     orders_cancelled_total.inc()
@@ -534,11 +599,12 @@ async def cancel_order(order_id: int):
 async def get_order_details(order_id: int):
     logger.info("Fetching order details", extra={"order_id": order_id})
 
-    if order_id not in orders_db:
+    async with async_session_maker() as session:
+        order = await fetch_order(session, order_id)
+
+    if not order:
         logger.warning("Order details failed - order not found", extra={"order_id": order_id})
         raise HTTPException(status_code=404, detail="Order not found")
-
-    order = orders_db[order_id]
 
     # Enrich order items with product details
     enriched_items = []
@@ -607,7 +673,7 @@ async def get_order_details(order_id: int):
         "items": enriched_items,
         "status": order["status"],
         "total": order["total"],
-        "created_at": order["created_at"]
+        "created_at": order["created_at"].isoformat() if isinstance(order["created_at"], datetime) else order["created_at"],
     }
 
 
@@ -615,22 +681,26 @@ async def get_order_details(order_id: int):
 async def get_revenue_stats():
     logger.info("Fetching revenue statistics")
 
-    if not orders_db:
+    async with async_session_maker() as session:
+        result = await session.execute(select(orders))
+        rows = [dict(r._mapping) for r in result]
+
+    if not rows:
         logger.info("Revenue statistics - no orders found")
         return {
             "total_orders": 0,
             "total_revenue": 0.0,
             "average_order_value": 0.0,
             "orders_by_status": {},
-            "revenue_by_status": {}
+            "revenue_by_status": {},
         }
 
     total_revenue = 0.0
-    total_orders = len(orders_db)
-    orders_by_status = {}
-    revenue_by_status = {}
+    total_orders = len(rows)
+    orders_by_status: Dict[str, int] = {}
+    revenue_by_status: Dict[str, float] = {}
 
-    for order in orders_db.values():
+    for order in rows:
         status = order["status"]
         order_total = order["total"]
 

@@ -1,0 +1,10 @@
+auto_version: true
+dockerfile_path: ../
+dockerhub: null
+helm_chart_path: ../../Helm/users-service
+helm_namespace: lesson4356
+helm_release: users-service
+image: users-service
+registry: cr.yandex/crpiqtsurn6alildl4cb
+tag: '2.16'
+update_values: true

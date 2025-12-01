@@ -18,8 +18,11 @@ from metrics import (
     product_price_histogram,
     stock_updates_total,
     start_metrics_updater,
-    HTTPClientMetrics
+    HTTPClientMetrics,
 )
+from sqlalchemy import select, insert, update, delete
+
+from database import async_session_maker, products, init_db
 
 load_dotenv()
 
@@ -41,13 +44,17 @@ app.add_middleware(TraceIDMiddleware)
 # Initialize Prometheus metrics
 Instrumentator().instrument(app).expose(app)
 
+
+@app.on_event("startup")
+async def startup_event() -> None:
+    """Initialize database tables on service startup."""
+    logger.info("Initializing products database...")
+    await init_db()
+    logger.info("Products database initialized successfully")
+
 # Configuration
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
 PORT = int(os.getenv("PORT", "8001"))
-
-# In-memory database for demo
-products_db = {}
-product_id_counter = 1
 
 
 class Product(BaseModel):
@@ -155,10 +162,23 @@ async def readiness_check():
 
 @app.post("/products", response_model=ProductResponse)
 async def create_product(product: Product):
-    global product_id_counter
-    product_id = product_id_counter
-    products_db[product_id] = product.model_dump()
-    product_id_counter += 1
+    """Create new product and persist it to PostgreSQL."""
+    async with async_session_maker() as session:
+        stmt = (
+            insert(products)
+            .values(
+                name=product.name,
+                description=product.description,
+                price=product.price,
+                stock=product.stock,
+                category=product.category,
+                created_at=datetime.utcnow(),
+            )
+            .returning(products.c.id)
+        )
+        result = await session.execute(stmt)
+        product_id = result.scalar()
+        await session.commit()
 
     # Update Prometheus metrics
     products_created_total.labels(category=product.category).inc()
@@ -173,33 +193,56 @@ async def create_product(product: Product):
             "price": product.price,
             "stock": product.stock,
             "category": product.category,
-        }
+        },
     )
 
-    return {"id": product_id, **products_db[product_id]}
+    return {
+        "id": product_id,
+        "name": product.name,
+        "description": product.description,
+        "price": product.price,
+        "stock": product.stock,
+        "category": product.category,
+    }
 
 
 @app.get("/products", response_model=List[ProductResponse])
 async def get_products(category: Optional[str] = None):
+    """Get list of products, optionally filtered by category."""
     logger.info(
         "Fetching products list",
-        extra={"category_filter": category if category else "all"}
+        extra={"category_filter": category if category else "all"},
     )
 
-    products = []
-    for product_id, product in products_db.items():
-        if category is None or product.get("category") == category:
-            products.append({"id": product_id, **product})
+    async with async_session_maker() as session:
+        stmt = select(products)
+        if category is not None:
+            stmt = stmt.where(products.c.category == category)
+        result = await session.execute(stmt)
+        rows = [dict(row._mapping) for row in result]
+
+    response: List[Dict[str, Any]] = []
+    for row in rows:
+        response.append(
+            {
+                "id": row["id"],
+                "name": row["name"],
+                "description": row["description"],
+                "price": row["price"],
+                "stock": row["stock"],
+                "category": row["category"],
+            }
+        )
 
     logger.info(
         "Products list retrieved",
         extra={
-            "products_count": len(products),
+            "products_count": len(response),
             "category_filter": category if category else "all",
-        }
+        },
     )
 
-    return products
+    return response
 
 
 @app.get("/products/popular")
@@ -398,32 +441,66 @@ async def get_low_stock_products(threshold: int = 5):
 
 @app.get("/products/{product_id}", response_model=ProductResponse)
 async def get_product(product_id: int):
+    """Get single product by id from PostgreSQL."""
     logger.info("Fetching product", extra={"product_id": product_id})
 
-    if product_id not in products_db:
+    async with async_session_maker() as session:
+        stmt = select(products).where(products.c.id == product_id)
+        result = await session.execute(stmt)
+        row = result.first()
+
+    if not row:
         logger.warning("Product not found", extra={"product_id": product_id})
         raise HTTPException(status_code=404, detail="Product not found")
+
+    data = dict(row._mapping)
 
     logger.info(
         "Product retrieved",
         extra={
             "product_id": product_id,
-            "product_name": products_db[product_id]["name"],
-        }
+            "product_name": data["name"],
+        },
     )
 
-    return {"id": product_id, **products_db[product_id]}
+    return {
+        "id": data["id"],
+        "name": data["name"],
+        "description": data["description"],
+        "price": data["price"],
+        "stock": data["stock"],
+        "category": data["category"],
+    }
 
 
 @app.put("/products/{product_id}", response_model=ProductResponse)
 async def update_product(product_id: int, product: Product):
+    """Update product fields in PostgreSQL."""
     logger.info("Updating product", extra={"product_id": product_id})
 
-    if product_id not in products_db:
-        logger.warning("Update failed - product not found", extra={"product_id": product_id})
-        raise HTTPException(status_code=404, detail="Product not found")
+    async with async_session_maker() as session:
+        # Ensure product exists
+        exists_stmt = select(products.c.id).where(products.c.id == product_id)
+        exists_result = await session.execute(exists_stmt)
+        if not exists_result.first():
+            logger.warning(
+                "Update failed - product not found", extra={"product_id": product_id}
+            )
+            raise HTTPException(status_code=404, detail="Product not found")
 
-    products_db[product_id] = product.model_dump()
+        stmt = (
+            update(products)
+            .where(products.c.id == product_id)
+            .values(
+                name=product.name,
+                description=product.description,
+                price=product.price,
+                stock=product.stock,
+                category=product.category,
+            )
+        )
+        await session.execute(stmt)
+        await session.commit()
 
     logger.info(
         "Product updated",
@@ -432,37 +509,52 @@ async def update_product(product_id: int, product: Product):
             "product_name": product.name,
             "price": product.price,
             "stock": product.stock,
-        }
+        },
     )
 
-    return {"id": product_id, **products_db[product_id]}
+    return {
+        "id": product_id,
+        "name": product.name,
+        "description": product.description,
+        "price": product.price,
+        "stock": product.stock,
+        "category": product.category,
+    }
 
 
 @app.delete("/products/{product_id}")
 async def delete_product(product_id: int):
+    """Delete product from PostgreSQL."""
     logger.info("Deleting product", extra={"product_id": product_id})
 
-    if product_id not in products_db:
-        logger.warning("Delete failed - product not found", extra={"product_id": product_id})
-        raise HTTPException(status_code=404, detail="Product not found")
+    async with async_session_maker() as session:
+        stmt = select(products).where(products.c.id == product_id)
+        result = await session.execute(stmt)
+        row = result.first()
 
-    product = products_db[product_id]
-    product_name = product["name"]
-    product_category = product["category"]
-    product_stock = product["stock"]
+        if not row:
+            logger.warning(
+                "Delete failed - product not found",
+                extra={"product_id": product_id},
+            )
+            raise HTTPException(status_code=404, detail="Product not found")
 
-    # Update Prometheus metrics
-    products_deleted_total.labels(category=product_category).inc()
-    products_stock_gauge.dec(product_stock)
+        data = dict(row._mapping)
 
-    del products_db[product_id]
+        # Update Prometheus metrics before deleting
+        products_deleted_total.labels(category=data["category"]).inc()
+        products_stock_gauge.dec(data["stock"])
+
+        del_stmt = delete(products).where(products.c.id == product_id)
+        await session.execute(del_stmt)
+        await session.commit()
 
     logger.info(
         "Product deleted",
         extra={
             "product_id": product_id,
-            "product_name": product_name,
-        }
+            "product_name": data["name"],
+        },
     )
 
     return {"message": "Product deleted successfully"}
@@ -470,35 +562,47 @@ async def delete_product(product_id: int):
 
 @app.patch("/products/{product_id}/stock")
 async def update_stock(product_id: int, quantity: int):
-    if product_id not in products_db:
-        logger.warning(
-            "Stock update failed - product not found",
-            extra={"product_id": product_id}
+    """Change product stock value in PostgreSQL."""
+    async with async_session_maker() as session:
+        stmt = select(products).where(products.c.id == product_id)
+        result = await session.execute(stmt)
+        row = result.first()
+
+        if not row:
+            logger.warning(
+                "Stock update failed - product not found",
+                extra={"product_id": product_id},
+            )
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        data = dict(row._mapping)
+        old_stock = data["stock"]
+        new_stock = old_stock + quantity
+
+        if new_stock < 0:
+            logger.warning(
+                "Stock update failed - insufficient stock",
+                extra={
+                    "product_id": product_id,
+                    "current_stock": old_stock,
+                    "requested_quantity": quantity,
+                },
+            )
+            raise HTTPException(status_code=400, detail="Insufficient stock")
+
+        upd_stmt = (
+            update(products)
+            .where(products.c.id == product_id)
+            .values(stock=new_stock)
         )
-        raise HTTPException(status_code=404, detail="Product not found")
-
-    product = products_db[product_id]
-    old_stock = product["stock"]
-    new_stock = old_stock + quantity
-
-    if new_stock < 0:
-        logger.warning(
-            "Stock update failed - insufficient stock",
-            extra={
-                "product_id": product_id,
-                "current_stock": old_stock,
-                "requested_quantity": quantity,
-            }
-        )
-        raise HTTPException(status_code=400, detail="Insufficient stock")
-
-    products_db[product_id]["stock"] = new_stock
+        await session.execute(upd_stmt)
+        await session.commit()
 
     # Update Prometheus metrics
     operation = "increase" if quantity > 0 else "decrease"
     stock_updates_total.labels(
         product_id=str(product_id),
-        operation=operation
+        operation=operation,
     ).inc()
     products_stock_gauge.inc(quantity)
 
@@ -509,7 +613,7 @@ async def update_stock(product_id: int, quantity: int):
             "old_stock": old_stock,
             "new_stock": new_stock,
             "quantity_change": quantity,
-        }
+        },
     )
 
     return {"id": product_id, "stock": new_stock}

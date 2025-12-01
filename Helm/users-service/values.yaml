@@ -2,7 +2,7 @@
 namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/users-service
-  tag: "4.0"
+  tag: "2.16"
 
 # Конфигурация Deployment
 replicaCount: 1
@@ -14,11 +14,11 @@ service:
   nodePort: 30003
 
 ports:
-  - name: http-metrics    # ← Имя порта для ServiceMonitor
-    port: 8003
-    targetPort: 8003
-    protocol: TCP
-    nodePort: 30003  
+- name: http-metrics      # ← Имя порта для ServiceMonitor
+  port: 8003
+  targetPort: 8003
+  protocol: TCP
+  nodePort: 30003
 
 # Настройки приложения
 config:
@@ -28,11 +28,14 @@ config:
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
   METRICS_ENABLED: "true"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
 
-secrets:
-  TEST_USER_PASSWORD: "cGFzc3dvcmQxMjM="
-  TEST_USER_NAME: "Sm9obiBEb2U="
-  TEST_USER_EMAIL: "dXNlckBleGFtcGxlLmNvbQ=="
+
+secret:
+  POSTGRES_USER: "user"
+  POSTGRES_PASSWORD: "password"
+  POSTGRES_DB: "reviews"
 
 # Ресурсы
 resources:
@@ -61,4 +64,3 @@ readinessProbe:
   failureThreshold: 3
   enabled: false
 
- 

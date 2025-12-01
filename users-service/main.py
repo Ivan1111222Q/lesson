@@ -10,6 +10,7 @@ import httpx
 import os
 import time
 from datetime import datetime
+
 from dotenv import load_dotenv
 from logger import logger, get_trace_id
 from middleware import TraceIDMiddleware
@@ -20,8 +21,11 @@ from metrics import (
     user_logouts_total,
     active_users_gauge,
     start_metrics_updater,
-    HTTPClientMetrics
+    HTTPClientMetrics,
 )
+from sqlalchemy import select, insert
+
+from database import async_session_maker, users, init_db, fetch_user_by_id, fetch_user_by_email
 
 load_dotenv()
 
@@ -44,19 +48,21 @@ security = HTTPBearer()
 # Initialize Prometheus metrics
 Instrumentator().instrument(app).expose(app)
 
-# Initialize test user on startup
-@app.on_event("startup")
-async def startup_event():
-    init_test_user()
-
 # Configuration
 ORDERS_SERVICE_URL = os.getenv("ORDERS_SERVICE_URL", "http://orders-service:8002")
 PORT = int(os.getenv("PORT", "8003"))
 
-# In-memory database for demo
-users_db = {}
-tokens_db = {}
-user_id_counter = 1
+# In-memory token store (sessions), users хранятся в PostgreSQL
+tokens_db: Dict[str, int] = {}
+
+
+@app.on_event("startup")
+async def startup_event():
+    """Initialize DB and test user on startup."""
+    logger.info("Initializing users database...")
+    await init_db()
+    logger.info("Users database initialized successfully")
+    await init_test_user()
 
 
 class UserRegister(BaseModel):
@@ -89,7 +95,7 @@ def generate_token() -> str:
     return secrets.token_urlsafe(32)
 
 
-def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
+async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
     token = credentials.credentials
     if token not in tokens_db:
         raise HTTPException(
@@ -97,13 +103,21 @@ def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(securit
             detail="Invalid authentication credentials"
         )
     user_id = tokens_db[token]
-    return users_db[user_id]
+
+    async with async_session_maker() as session:
+        user = await fetch_user_by_id(session, user_id)
+
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="User not found"
+        )
+
+    return user
 
 
-def init_test_user():
-    """Initialize test user from environment variables if all are set"""
-    global user_id_counter
-
+async def init_test_user():
+    """Initialize test user from environment variables if all are set (stored in DB)."""
     test_email = os.getenv("TEST_USER_EMAIL")
     test_password = os.getenv("TEST_USER_PASSWORD")
     test_name = os.getenv("TEST_USER_NAME")
@@ -113,31 +127,38 @@ def init_test_user():
         logger.info("Test user not configured (one or more env variables missing)")
         return
 
-    # Check if test user already exists
-    for existing_user in users_db.values():
-        if existing_user["email"] == test_email:
+    async with async_session_maker() as session:
+        existing = await fetch_user_by_email(session, test_email)
+        if existing:
             logger.info(
                 "Test user already exists",
                 extra={"email": test_email}
             )
             return
 
-    # Create test user
-    user_id = user_id_counter
-    password_hash = hash_password(test_password)
+        password_hash = hash_password(test_password)
 
-    users_db[user_id] = {
-        "id": user_id,
-        "email": test_email,
-        "name": test_name,
-        "password_hash": password_hash
-    }
+        stmt = (
+            insert(users)
+            .values(
+                email=test_email,
+                name=test_name,
+                password_hash=password_hash,
+                created_at=datetime.utcnow(),
+            )
+            .returning(users.c.id)
+        )
+        result = await session.execute(stmt)
+        user_id = result.scalar()
+        await session.commit()
 
-    user_id_counter += 1
+        # Update Prometheus metrics
+        users_registered_total.inc()
 
-    # Update Prometheus metrics
-    users_registered_total.inc()
-    active_users_gauge.set(len(users_db))
+        count_stmt = select(users.c.id)
+        count_result = await session.execute(count_stmt)
+        ids = [row[0] for row in count_result]
+        active_users_gauge.set(len(ids))
 
     logger.info(
         "Test user created successfully",
@@ -242,13 +263,12 @@ async def readiness_check():
 
 @app.post("/register", response_model=TokenResponse)
 async def register(user: UserRegister):
-    global user_id_counter
-
     logger.info("User registration attempt", extra={"email": user.email})
 
-    # Check if email already exists
-    for existing_user in users_db.values():
-        if existing_user["email"] == user.email:
+    async with async_session_maker() as session:
+        # Check if email already exists
+        existing = await fetch_user_by_email(session, user.email)
+        if existing:
             logger.warning(
                 "Registration failed - email already exists",
                 extra={"email": user.email}
@@ -258,23 +278,32 @@ async def register(user: UserRegister):
                 detail="Email already registered"
             )
 
-    user_id = user_id_counter
-    password_hash = hash_password(user.password)
+        password_hash = hash_password(user.password)
 
-    users_db[user_id] = {
-        "id": user_id,
-        "email": user.email,
-        "name": user.name,
-        "password_hash": password_hash
-    }
+        stmt = (
+            insert(users)
+            .values(
+                email=user.email,
+                name=user.name,
+                password_hash=password_hash,
+                created_at=datetime.utcnow(),
+            )
+            .returning(users.c.id)
+        )
+        result = await session.execute(stmt)
+        user_id = result.scalar()
+        await session.commit()
+
+        # Update Prometheus metrics
+        users_registered_total.inc()
+
+        count_stmt = select(users.c.id)
+        count_result = await session.execute(count_stmt)
+        ids = [row[0] for row in count_result]
+        active_users_gauge.set(len(ids))
 
     token = generate_token()
     tokens_db[token] = user_id
-    user_id_counter += 1
-
-    # Update Prometheus metrics
-    users_registered_total.inc()
-    active_users_gauge.set(len(users_db))
 
     logger.info(
         "User registered successfully",
@@ -301,31 +330,33 @@ async def login(credentials: UserLogin):
 
     password_hash = hash_password(credentials.password)
 
-    for user_id, user in users_db.items():
-        if (user["email"] == credentials.email and
-                user["password_hash"] == password_hash):
-            token = generate_token()
-            tokens_db[token] = user_id
+    async with async_session_maker() as session:
+        user = await fetch_user_by_email(session, credentials.email)
 
-            # Update Prometheus metrics
-            user_logins_total.labels(result="success").inc()
+    if user and user["password_hash"] == password_hash:
+        user_id = user["id"]
+        token = generate_token()
+        tokens_db[token] = user_id
 
-            logger.info(
-                "User logged in successfully",
-                extra={
-                    "user_id": user_id,
-                    "email": user["email"],
-                }
-            )
+        # Update Prometheus metrics
+        user_logins_total.labels(result="success").inc()
 
-            return {
-                "token": token,
-                "user": {
-                    "id": user_id,
-                    "email": user["email"],
-                    "name": user["name"]
-                }
+        logger.info(
+            "User logged in successfully",
+            extra={
+                "user_id": user_id,
+                "email": user["email"],
             }
+        )
+
+        return {
+            "token": token,
+            "user": {
+                "id": user_id,
+                "email": user["email"],
+                "name": user["name"]
+            }
+        }
 
     # Update Prometheus metrics for failed login
     user_logins_total.labels(result="failed").inc()
@@ -361,11 +392,12 @@ async def logout(credentials: HTTPAuthorizationCredentials = Depends(security)):
 async def get_user(user_id: int):
     logger.info("Fetching user", extra={"user_id": user_id})
 
-    if user_id not in users_db:
+    async with async_session_maker() as session:
+        user = await fetch_user_by_id(session, user_id)
+
+    if not user:
         logger.warning("User not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User not found")
-
-    user = users_db[user_id]
 
     logger.info(
         "User retrieved",
@@ -387,7 +419,10 @@ async def get_user_orders(user_id: int):
     logger.info("Fetching user orders", extra={"user_id": user_id})
 
     # Verify user exists
-    if user_id not in users_db:
+    async with async_session_maker() as session:
+        user = await fetch_user_by_id(session, user_id)
+
+    if not user:
         logger.warning("User orders failed - user not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -416,7 +451,6 @@ async def get_user_orders(user_id: int):
 
             if response.status_code == 200:
                 orders = response.json()
-                user = users_db[user_id]
 
                 logger.info(
                     "User orders retrieved",
@@ -465,11 +499,12 @@ async def get_user_stats(user_id: int):
     logger.info("Fetching user statistics", extra={"user_id": user_id})
 
     # Verify user exists
-    if user_id not in users_db:
+    async with async_session_maker() as session:
+        user = await fetch_user_by_id(session, user_id)
+
+    if not user:
         logger.warning("User stats failed - user not found", extra={"user_id": user_id})
         raise HTTPException(status_code=404, detail="User not found")
-
-    user = users_db[user_id]
 
     # Fetch orders from orders-service
     async with httpx.AsyncClient() as client:

@@ -21,6 +21,8 @@ spec:
         envFrom:
         - configMapRef:
             name: orders-config
+        - secretRef:
+            name: postgres-secret    
         livenessProbe:
           httpGet:
             path: /live

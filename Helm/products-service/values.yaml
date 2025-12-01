@@ -1,22 +1,22 @@
 namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/products-service
-  tag: "5.0"
+  tag: "2.13"
 
 
 service:
   type: NodePort
   ports:
-  port: 8001         
-  targetPort: 8001         
+  port: 8001
+  targetPort: 8001
   nodePort: 30001
 
 ports:
-  - name: http-metrics    # ← Имя порта для ServiceMonitor
-    port: 8001
-    targetPort: 8001
-    protocol: TCP
-    nodePort: 30001   
+- name: http-metrics      # ← Имя порта для ServiceMonitor
+  port: 8001
+  targetPort: 8001
+  protocol: TCP
+  nodePort: 30001
 
 replicaCount: 1
 
@@ -27,6 +27,13 @@ config:
   LOG_LEVEL: "INFO"
   LOG_FORMAT: "json"
   METRICS_ENABLED: "true"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+
+secret:
+  POSTGRES_USER: "user"
+  POSTGRES_PASSWORD: "password"
+  POSTGRES_DB: "reviews"
 
 resources:
   requests:
@@ -52,4 +59,4 @@ readinessProbe:
   periodSeconds: 3
   timeoutSeconds: 2
   failureThreshold: 3
-  enabled: false      
+  enabled: false

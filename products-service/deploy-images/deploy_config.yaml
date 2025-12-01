@@ -1,0 +1,10 @@
+auto_version: true
+dockerfile_path: ../
+dockerhub: null
+helm_chart_path: ../../Helm/products-service
+helm_namespace: lesson4356
+helm_release: products-service
+image: products-service
+registry: cr.yandex/crpiqtsurn6alildl4cb
+tag: '2.13'
+update_values: true
