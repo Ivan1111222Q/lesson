@@ -21,7 +21,7 @@ readinessProbe:
   port: 80
   timeoutSeconds: 2
 
-replicaCount: 1
+replicaCount: 2
 
 resources:
   limits:
@@ -37,3 +37,13 @@ service:
   targetPort: 80
   type: NodePort
 
+# Canary стратегия
+strategy:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: { duration: 30s }
+      - setWeight: 50
+      - pause: { duration: 30s }
+      - setWeight: 80
+      - pause: { duration: 30s }

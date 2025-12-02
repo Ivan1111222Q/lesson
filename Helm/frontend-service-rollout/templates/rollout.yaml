@@ -1,16 +1,13 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: {{ .Chart.Name }}-deployment
+  name: {{ .Chart.Name }}-rollout
   namespace: {{ .Values.namespace }}
-  labels:
-    app: {{ .Chart.Name }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 spec:
   strategy:
     canary:
-      steps:
-        {{- toYaml .Values.strategy.canary.steps | nindent 8 }}
+        steps:
+          {{- toYaml .Values.strategy.canary.steps | nindent 8 }}
   replicas: {{ .Values.replicaCount }}
   selector:
     matchLabels:
@@ -19,17 +16,25 @@ spec:
     metadata:
       labels:
         app: {{ .Chart.Name }}
+      {{- if .Values.prometheusScrape }}
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "{{ .Values.service.port }}"
+        prometheus.io/path: "/metrics"
+      {{- else }}
+      annotations:
+        prometheus.io/scrape: "false"
+      {{- end }}
     spec:
       containers:
       - name: {{ .Chart.Name }}
         image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
         ports:
         - containerPort: {{ .Values.service.targetPort }}
-        envFrom:
-        - configMapRef:
-            name: {{ .Chart.Name }}-config
-        - secretRef:
-            name: {{ .Chart.Name }}-secret
+        volumeMounts:
+        - name: nginx-config
+          mountPath: /etc/nginx/nginx.conf
+          subPath: nginx.conf
         {{- if .Values.livenessProbe }}
         livenessProbe:
           httpGet:
@@ -40,7 +45,7 @@ spec:
           timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
           failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
         {{- end }}
-        {{- if .Values.readinessProbe.enabled }}
+        {{- if .Values.readinessProbe }}
         readinessProbe:
           httpGet:
             path: {{ .Values.readinessProbe.path }}
@@ -52,4 +57,7 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-            
+      volumes:
+      - name: nginx-config
+        configMap:
+          name: {{ .Chart.Name }}-nginx-config

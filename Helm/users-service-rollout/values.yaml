@@ -5,7 +5,7 @@ image:
   tag: "2.17"
 
 # Конфигурация Deployment
-replicaCount: 4
+replicaCount: 2
 
 service:
   type: NodePort

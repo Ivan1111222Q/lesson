@@ -1,11 +1,8 @@
 apiVersion: argoproj.io/v1alpha1
 kind: Rollout
 metadata:
-  name: {{ .Chart.Name }}-deployment
+  name: {{ .Chart.Name }}-rollout
   namespace: {{ .Values.namespace }}
-  labels:
-    app: {{ .Chart.Name }}
-    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
 spec:
   strategy:
     canary:
@@ -26,10 +23,13 @@ spec:
         ports:
         - containerPort: {{ .Values.service.targetPort }}
         envFrom:
-        - configMapRef:
-            name: {{ .Chart.Name }}-config
-        - secretRef:
-            name: {{ .Chart.Name }}-secret
+          - configMapRef:
+              name: {{ .Chart.Name }}-config
+          - secretRef:
+              name: {{ .Chart.Name }}-secret
+        volumeMounts:
+          - name: reviews-storage
+            mountPath: /app/uploads
         {{- if .Values.livenessProbe }}
         livenessProbe:
           httpGet:
@@ -52,4 +52,7 @@ spec:
         {{- end }}
         resources:
           {{- toYaml .Values.resources | nindent 12 }}
-            
+      volumes:
+        - name: reviews-storage
+          persistentVolumeClaim:
+            claimName: reviews-pvc 
