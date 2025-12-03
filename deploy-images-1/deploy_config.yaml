@@ -1,0 +1,15 @@
+auto_version: true
+dockerfile_path: /Users/spirit/Downloads/LS/lesson4356/users-service
+dockerhub: null
+helm_namespace: lesson4356
+image: users-service
+registry: cr.yandex/crpiqtsurn6alildl4cb
+rollout_helm_chart_path: /Users/spirit/Downloads/LS/lesson4356/Helm/users-service-rollout
+rollout_helm_namespace: lesson4356
+rollout_helm_release: users-service-rollout
+rollout_update_values: true
+services_umbrella_chart_path: /Users/spirit/Downloads/LS/lesson4356/Helm/services-rollout
+services_umbrella_namespace: lesson4356
+services_umbrella_release: services-rollout
+tag: '2.23'
+update_values: true

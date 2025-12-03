@@ -2,7 +2,7 @@
 namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/users-service
-  tag: "2.17"
+  tag: "2.23"
 
 # Конфигурация Deployment
 replicaCount: 2
@@ -68,9 +68,9 @@ readinessProbe:
 strategy:
   canary:
     steps:
-      - setWeight: 20
-      - pause: { duration: 30s }
-      - setWeight: 50
-      - pause: { duration: 30s }
-      - setWeight: 80
-      - pause: { duration: 30s }
+    - setWeight: 20
+    - pause: {duration: 30s}
+    - setWeight: 50
+    - pause: {duration: 30s}
+    - setWeight: 80
+    - pause: {duration: 30s}

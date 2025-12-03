@@ -1,0 +1,16 @@
+frontend-service-rollout:
+  replicaCount: 2
+
+orders-service-rollout:
+  replicaCount: 2
+
+products-service-rollout:
+  replicaCount: 2
+
+users-service-rollout:
+  replicaCount: 2
+
+reviews-service-rollout:
+  replicaCount: 2
+
+
