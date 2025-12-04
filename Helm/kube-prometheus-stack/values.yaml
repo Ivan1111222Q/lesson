@@ -4676,65 +4676,34 @@ prometheus:
       additionalLabels:
         release: kube-prometheus-stack
 
-    - name: "users-service-monitor"
+    # =========================================================================
+    # УНИВЕРСАЛЬНЫЙ ServiceMonitor для всех сервисов
+    # =========================================================================
+    # Автоматически находит ВСЕ сервисы в namespace lesson4356,
+    # у которых есть label: metrics: "true"
+    #
+    # Чтобы сервис мониторился, нужно добавить в его Service:
+    #   metadata:
+    #     labels:
+    #       metrics: "true"    # ← этот label
+    #   spec:
+    #     ports:
+    #       - name: http-metrics  # ← имя порта должно совпадать
+    # =========================================================================
+    - name: "lesson4356-services"
       labels:
         release: kube-prometheus-stack
       namespaceSelector:
         matchNames:
-        - lesson4356
+          - lesson4356
       selector:
         matchLabels:
-          app: users-service
+          metrics: "true"      # Ищем все Service с этим label
       endpoints:
-      - port: http
-        path: /metrics
-        interval: 15s
-        scrapeTimeout: 10s 
-
-    - name: "reviews-service-monitor"
-      labels:
-        release: kube-prometheus-stack
-      namespaceSelector:
-        matchNames:
-        - lesson4356
-      selector:
-        matchLabels:
-          app: reviews-service
-      endpoints:
-      - port: http
-        path: /metrics
-        interval: 15s
-        scrapeTimeout: 10s
-
-    - name: "products-service-monitor"
-      labels:
-        release: kube-prometheus-stack
-      namespaceSelector:
-        matchNames:
-        - lesson4356
-      selector:
-        matchLabels:
-          app: products-service
-      endpoints:
-      - port: http
-        path: /metrics
-        interval: 15s
-        scrapeTimeout: 10s            
-    
-    - name: "orders-service-monitor"
-      labels:
-        release: kube-prometheus-stack
-      namespaceSelector:
-        matchNames:
-        - lesson4356
-      selector:
-        matchLabels:
-          app: orders-service
-      endpoints:
-      - port: http
-        path: /metrics
-        interval: 15s
-        scrapeTimeout: 10s  
+        - port: http-metrics   # Имя порта в Service (не номер!)
+          path: /metrics
+          interval: 15s
+          scrapeTimeout: 10s  
 
     
      
