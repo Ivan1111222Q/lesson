@@ -1,0 +1,19 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AnalysisTemplate
+metadata:
+  name: {{ .Chart.Name }}-success-rate
+  namespace: {{ .Values.namespace }}
+spec:
+  metrics:
+    - name: success-rate
+      # Условие: >= 99% запросов без 5xx ошибок
+      successCondition: result[0] >= 0.99
+      failureLimit: 3
+      interval: 30s
+      provider:
+        prometheus:
+          address: "http://prometheus.lesson4356.svc.cluster.local:9090"
+          query: |
+            sum(rate(http_requests_total{handler!~"/metrics|/health|/live|/ready", status!~"5.."}[2m]))
+            /
+            sum(rate(http_requests_total{handler!~"/metrics|/health|/live|/ready"}[2m]))

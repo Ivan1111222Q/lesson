@@ -60,13 +60,22 @@ readinessProbe:
   failureThreshold: 3
   enabled: false
 
-# Canary стратегия
+# Canary стратегия с проверкой 5xx ошибок
 strategy:
   canary:
     steps:
       - setWeight: 20
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: orders-service-rollout-success-rate
       - setWeight: 50
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: orders-service-rollout-success-rate
       - setWeight: 80
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: orders-service-rollout-success-rate
