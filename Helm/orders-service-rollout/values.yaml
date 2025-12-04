@@ -61,6 +61,7 @@ readinessProbe:
   enabled: false
 
 # Canary стратегия с проверкой 5xx ошибок
+# Использует общий AnalysisTemplate "success-rate-analysis" из services-rollout
 strategy:
   canary:
     steps:
@@ -68,14 +69,14 @@ strategy:
       - pause: { duration: 30s }
       - analysis:
           templates:
-            - templateName: orders-service-rollout-success-rate
+            - templateName: success-rate-analysis
       - setWeight: 50
       - pause: { duration: 30s }
       - analysis:
           templates:
-            - templateName: orders-service-rollout-success-rate
+            - templateName: success-rate-analysis
       - setWeight: 80
       - pause: { duration: 30s }
       - analysis:
           templates:
-            - templateName: orders-service-rollout-success-rate
+            - templateName: success-rate-analysis
