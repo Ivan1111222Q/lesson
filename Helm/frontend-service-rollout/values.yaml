@@ -37,13 +37,54 @@ service:
   targetPort: 80
   type: NodePort
 
-# Canary стратегия
+# Canary стратегия с проверкой 5xx ошибок
+# Использует общий AnalysisTemplate "success-rate-analysis" из services-rollout
 strategy:
   canary:
     steps:
       - setWeight: 20
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: success-rate-analysis
       - setWeight: 50
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: success-rate-analysis
       - setWeight: 80
       - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: success-rate-analysis
+
+# ============================================================================
+# ГЛОБАЛЬНЫЕ НАСТРОЙКИ
+# ============================================================================
+
+# ============================================================================
+# ANALYSIS - настройки проверки здоровья при canary deployment
+# ============================================================================
+analysis:
+  # Включить/выключить создание AnalysisTemplate
+  enabled: true
+
+  # Адрес Prometheus сервера
+  prometheusAddress: "http://prometheus.lesson4356.svc.cluster.local:9090"
+
+  # Порог успешности (0.99 = 99% запросов без 5xx ошибок)
+  successThreshold: 0.99
+
+  # Сколько провалов допускается перед rollback
+  failureLimit: 3
+
+  # Интервал между проверками
+  interval: 30s
+
+  # Количество проверок на каждом шаге canary
+  # (3 проверки × 30s = 90 секунд анализа на каждом шаге)
+  count: 3
+
+# ============================================================================
+# НАСТРОЙКИ СЕРВИСОВ
+# ============================================================================        

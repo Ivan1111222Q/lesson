@@ -4676,7 +4676,22 @@ prometheus:
       additionalLabels:
         release: kube-prometheus-stack
 
-    # =========================================================================
+    - name: "lesson4356-services"
+      labels:
+        release: kube-prometheus-stack
+      namespaceSelector:
+        matchNames:
+        - lesson4356
+      selector:
+        matchLabels:
+          metrics: "true"      # Ищем все Service с этим label
+      endpoints:
+        - port: http-metrics   # Имя порта в Service (не номер!)
+          path: /metrics
+          interval: 15s
+          scrapeTimeout: 10s  
+
+   # =========================================================================
     # УНИВЕРСАЛЬНЫЙ ServiceMonitor для всех сервисов
     # =========================================================================
     # Автоматически находит ВСЕ сервисы в namespace lesson4356,
@@ -4689,21 +4704,7 @@ prometheus:
     #   spec:
     #     ports:
     #       - name: http-metrics  # ← имя порта должно совпадать
-    # =========================================================================
-    - name: "lesson4356-services"
-      labels:
-        release: kube-prometheus-stack
-      namespaceSelector:
-        matchNames:
-          - lesson4356
-      selector:
-        matchLabels:
-          metrics: "true"      # Ищем все Service с этим label
-      endpoints:
-        - port: http-metrics   # Имя порта в Service (не номер!)
-          path: /metrics
-          interval: 15s
-          scrapeTimeout: 10s  
+    # =========================================================================        
 
     
      

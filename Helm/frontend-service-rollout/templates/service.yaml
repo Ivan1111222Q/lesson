@@ -3,12 +3,16 @@ kind: Service
 metadata:
   name: {{ .Chart.Name }}-service
   namespace: {{ .Values.namespace }}
+  labels:
+    app: {{ .Chart.Name }}
+    metrics: "true"
 spec:
   selector:
     app: {{ .Chart.Name }}
   type: {{ .Values.service.type }}
   ports:
-    - port: {{ .Values.service.port }}
+    - name: http-metrics
+      port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
       {{- if and (eq .Values.service.type "NodePort") .Values.service.nodePort }}
       nodePort: {{ .Values.service.nodePort }}

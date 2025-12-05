@@ -1,7 +1,7 @@
 namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
-  tag: "5.0"
+  tag: "2.14"
 
 service:
   type: NodePort

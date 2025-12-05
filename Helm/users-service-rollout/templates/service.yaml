@@ -5,12 +5,13 @@ metadata:
   namespace: {{ .Values.namespace }}
   labels:
     app: {{ .Chart.Name }}
+    metrics: "true"
 spec:
   selector:
     app: {{ .Chart.Name }}
   type: {{ .Values.service.type }}
   ports:
-    - name: {{ .Values.service.portName | default "http" }}  # ← используем из values
+    - name: http-metrics
       port: {{ .Values.service.port }}
       targetPort: {{ .Values.service.targetPort }}
       {{- if eq .Values.service.type "NodePort" }}
