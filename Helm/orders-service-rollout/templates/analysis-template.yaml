@@ -24,7 +24,7 @@ spec:
   args:
     - name: service-name
       # Значение по умолчанию (можно переопределить в Rollout)
-      value: "unknown-service"
+      value: "{{ .Chart.Name }}-service"
 
   # ============================================================================
   # METRICS - список метрик для проверки
@@ -48,11 +48,13 @@ spec:
       #
       # >= 0.99 означает: минимум 99% запросов должны быть успешными (без 5xx)
       #
+      # Проверяем наличие результата перед доступом к result[0]
+      # Если данных нет (len(result) == 0), считаем успехом (1.0 >= threshold)
+      #
       # Примеры других условий:
       #   result[0] >= 0.95        - минимум 95% успешных
       #   result[0] <= 0.01        - максимум 1% ошибок
       #   result[0] < 500          - latency меньше 500ms
-      #   len(result) == 0         - нет результатов (для проверки отсутствия ошибок)
       # ========================================================================
       successCondition: "result[0] >= {{ .Values.analysis.successThreshold }}"
 
@@ -133,10 +135,13 @@ spec:
           # ------------------------------------------------------------------
           #
           # ЧИСЛИТЕЛЬ (успешные запросы):
-          #   sum(rate(http_requests_total{...filters..., status!~"5.."}[2m]))
+          #   sum(rate(http_requests_total{service="<service-name>", ...filters..., status!~"5.."}[2m]))
           #
           #   http_requests_total - метрика от prometheus_fastapi_instrumentator
           #                         Счётчик всех HTTP запросов к сервису
+          #
+          #   {service="<service-name>"}
+          #       - фильтруем по конкретному сервису (canary или stable)
           #
           #   {handler!~"/metrics|/health|/live|/ready"}
           #       - исключаем служебные эндпоинты (они не отражают бизнес-логику)
@@ -155,9 +160,14 @@ spec:
           #
           # ------------------------------------------------------------------
           # ЗНАМЕНАТЕЛЬ (все запросы):
-          #   sum(rate(http_requests_total{...filters...}[2m]))
+          #   sum(rate(http_requests_total{service="<service-name>", ...filters...}[2m]))
           #
           #   То же самое, но БЕЗ фильтра по status - считаем ВСЕ запросы
+          #
+          # ------------------------------------------------------------------
+          # or vector(1) - если данных нет, возвращаем 1.0 (100% успешность)
+          #                Это позволяет canary deployment продолжиться, если
+          #                метрики еще не собрались (например, pod только запустился)
           #
           # ------------------------------------------------------------------
           # РЕЗУЛЬТАТ:
@@ -170,9 +180,11 @@ spec:
           #
           # ==================================================================
           query: |
-            sum(rate(http_requests_total{handler!~"/metrics|/health|/live|/ready", status!~"5.."}[2m]))
-            /
-            sum(rate(http_requests_total{handler!~"/metrics|/health|/live|/ready"}[2m]))
+            (
+              sum(rate(http_requests_total{service="{{`{{`}}args.service-name{{`}}`}}", handler!~"/metrics|/health|/live|/ready", status!~"5.."}[2m]))
+              /
+              sum(rate(http_requests_total{service="{{`{{`}}args.service-name{{`}}`}}", handler!~"/metrics|/health|/live|/ready"}[2m]))
+            ) or vector(1)
 {{- end }}
 
 # ============================================================================
