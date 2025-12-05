@@ -1,0 +1,51 @@
+# =============================================================================
+# VALUES ДЛЯ ORDERS-SERVICE
+# =============================================================================
+# Использование:
+#   helm install orders ../python-service-chart -f orders-service.yaml
+# =============================================================================
+
+serviceName: orders-service
+namespace: lesson4356
+
+image:
+  repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
+  tag: "2.14"
+
+replicaCount: 2
+
+service:
+  type: NodePort
+  port: 8002
+  targetPort: 8002
+  nodePort: 30002
+
+config:
+  PORT: "8002"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  PRODUCTS_SERVICE_URL: "http://products-service-service:8001"
+  USERS_SERVICE_URL: "http://users-service-service:8003"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+
+# TODO: раскомментировать после создания secret.yaml
+# secret:
+#   POSTGRES_USER: "user"
+#   POSTGRES_PASSWORD: "password"
+#   POSTGRES_DB: "orders"
+
+strategy:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: { duration: 30s }
+      - setWeight: 50
+      - pause: { duration: 30s }
+      - setWeight: 80
+      - pause: { duration: 30s }
+
+# =============================================================================
+# TODO: Добавить probes и resources после доработки rollout.yaml
+# =============================================================================

@@ -1,0 +1,56 @@
+# =============================================================================
+# VALUES ДЛЯ PRODUCTS-SERVICE
+# =============================================================================
+# Использование:
+#   helm install products ../python-service-chart -f products-service.yaml
+#
+# Сравни этот файл с orders-service.yaml и users-service.yaml
+# Обрати внимание что отличается только:
+#   - serviceName
+#   - image.repository и image.tag
+#   - порты (port, targetPort, nodePort)
+#   - config (специфичные для сервиса переменные)
+# =============================================================================
+
+serviceName: products-service
+namespace: lesson4356
+
+image:
+  repository: cr.yandex/crpiqtsurn6alildl4cb/products-service
+  tag: "2.13"
+
+replicaCount: 2
+
+service:
+  type: NodePort
+  port: 8001
+  targetPort: 8001
+  nodePort: 30001
+
+config:
+  PORT: "8001"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  # products-service общается только с orders-service
+  ORDERS_SERVICE_URL: "http://orders-service-service:8002"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+
+# TODO: раскомментировать после создания secret.yaml
+# secret:
+#   POSTGRES_USER: "user"
+#   POSTGRES_PASSWORD: "password"
+#   POSTGRES_DB: "products"
+
+strategy:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: { duration: 30s }
+      - setWeight: 50
+      - pause: { duration: 30s }
+      - setWeight: 80
+      - pause: { duration: 30s }
+
+# TODO: дописать probes и resources после доработки rollout.yaml
