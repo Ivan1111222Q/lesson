@@ -58,7 +58,7 @@ def main():
         run(["helm", "upgrade", "--install", release, chart, "-f", values, "-n", namespace])
         
         # Git push
-        print("📝 Git push")
+        print(f"📝 Git push в ветку {git_branch}")
         repo = Path(__file__).parent
         while repo != repo.parent and not (repo / ".git").exists():
             repo = repo.parent
