@@ -25,6 +25,7 @@ def main():
         git_branch = cfg.get("git_branch", "lesson")
         
         # Автоинкремент версии
+        print(f"🔄 Автоинкремент версии {tag}")
         if cfg.get("auto_version"):
             parts = tag.lstrip("v").split(".")
             if all(p.isdigit() for p in parts):
@@ -43,6 +44,7 @@ def main():
         run(["docker", "push", remote_img])
         
         # Обновление values
+        print(f"📝 Обновление values {values}")
         if cfg.get("update_values"):
             y = YAML()
             y.preserve_quotes = True
@@ -56,6 +58,7 @@ def main():
         run(["helm", "upgrade", "--install", release, chart, "-f", values, "-n", namespace])
         
         # Git push
+        print("📝 Git push")
         repo = Path(__file__).parent
         while repo != repo.parent and not (repo / ".git").exists():
             repo = repo.parent
