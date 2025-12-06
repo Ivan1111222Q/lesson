@@ -7,6 +7,6 @@ helm_namespace: lesson4356
 helm_release: users
 image: users-service
 registry: cr.yandex/crpiqtsurn6alildl4cb
-tag: '2.27'
+tag: '2.28'
 update_values: true
 values_file_path: /Users/spirit/Downloads/LS/lesson4356/Helm/values/users-service.yaml
