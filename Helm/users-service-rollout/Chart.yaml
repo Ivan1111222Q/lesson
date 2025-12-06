@@ -1,5 +1,0 @@
-apiVersion: v2
-name: users-service-rollout
-description: Users Service Helm Chart
-version: 0.1.0
-appVersion: "4.0"

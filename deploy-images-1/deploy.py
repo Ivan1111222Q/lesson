@@ -35,69 +35,27 @@ def check_dependencies():
 
 
 def validate_config(cfg):
-    """Валидирует конфигурацию
-
-    Поддерживаются два варианта:
-    - обычный Helm-чарт
-    - rollout-чарт
-    Можно использовать один из них или оба сразу.
-    """
-
-    # Базовые обязательные поля (независимо от типа чарта)
-    required = ['image', 'tag', 'registry', 'dockerfile_path', 'helm_namespace']
-
+    """Валидирует конфигурацию"""
+    # Базовые обязательные поля
+    required = ['image', 'tag', 'registry', 'dockerfile_path', 'helm_namespace', 
+                'helm_chart_path', 'values_file_path']
+    
     missing = [key for key in required if key not in cfg or cfg.get(key) in (None, "")]
     if missing:
         raise ValueError(f"❌ Отсутствуют обязательные поля в конфиге: {', '.join(missing)}")
-
+    
     # Проверка путей
     dockerfile_dir = Path(cfg['dockerfile_path'])
     if not dockerfile_dir.exists():
         raise ValueError(f"❌ Путь к Dockerfile не существует: {dockerfile_dir}")
     
-    # Обычный Helm-чарт (опционально)
-    helm_chart_path = cfg.get('helm_chart_path')
-    helm_release = cfg.get('helm_release')
-    if helm_chart_path or helm_release:
-        if not helm_chart_path or not helm_release:
-            raise ValueError("❌ Для работы с основным Helm chart необходимо указать оба поля: "
-                             "`helm_chart_path` и `helm_release`")
-
-        helm_chart = Path(helm_chart_path)
-        if not helm_chart.exists():
-            raise ValueError(f"❌ Путь к Helm chart не существует: {helm_chart}")
-
-        values_path = helm_chart / "values.yaml"
-        if not values_path.exists():
-            raise ValueError(f"❌ Файл values.yaml не найден: {values_path}")
-
-    # Rollout-чарт (опционально)
-    rollout_chart_path = cfg.get("rollout_helm_chart_path")
-    rollout_release = cfg.get("rollout_helm_release")
-    if rollout_chart_path or rollout_release:
-        if not rollout_chart_path or not rollout_release:
-            raise ValueError("❌ Для работы с rollout-чартом необходимо указать оба поля: "
-                             "`rollout_helm_chart_path` и `rollout_helm_release`")
-
-        rollout_chart = Path(rollout_chart_path)
-        if not rollout_chart.exists():
-            raise ValueError(f"❌ Путь к rollout Helm chart не существует: {rollout_chart}")
-
-        rollout_values_path = rollout_chart / "values.yaml"
-        if not rollout_values_path.exists():
-            raise ValueError(f"❌ Файл values.yaml не найден у rollout-чарта: {rollout_values_path}")
-
-    # Umbrella-чарт для сервисов (опционально)
-    services_umbrella_chart_path = cfg.get("services_umbrella_chart_path")
-    services_umbrella_release = cfg.get("services_umbrella_release")
-    if services_umbrella_chart_path or services_umbrella_release:
-        if not services_umbrella_chart_path or not services_umbrella_release:
-            raise ValueError("❌ Для работы с umbrella-чартом необходимо указать оба поля: "
-                             "`services_umbrella_chart_path` и `services_umbrella_release`")
-
-        umbrella_chart = Path(services_umbrella_chart_path)
-        if not umbrella_chart.exists():
-            raise ValueError(f"❌ Путь к umbrella Helm chart не существует: {umbrella_chart}")
+    helm_chart = Path(cfg['helm_chart_path'])
+    if not helm_chart.exists():
+        raise ValueError(f"❌ Путь к Helm chart не существует: {helm_chart}")
+    
+    values_file = Path(cfg['values_file_path'])
+    if not values_file.exists():
+        raise ValueError(f"❌ Файл values не найден: {values_file}")
 
 
 def inc_version(tag):
@@ -158,22 +116,12 @@ def main():
         registry = cfg["registry"]
         dockerhub = cfg.get("dockerhub")
         dockerfile_path = cfg["dockerfile_path"]
-        helm_chart_path = cfg.get("helm_chart_path")
-        release = cfg.get("helm_release")
+        helm_chart_path = cfg["helm_chart_path"]
+        values_file_path = cfg["values_file_path"]
+        release = cfg.get("helm_release") or name.replace("-service", "")  # Если не указан, берем имя без -service
         namespace = cfg["helm_namespace"]
         auto_version = cfg.get("auto_version", False)
         update_values = cfg.get("update_values", False)
-
-        # Параметры для rollout-чарта (опционально)
-        rollout_helm_chart_path = cfg.get("rollout_helm_chart_path")
-        rollout_release = cfg.get("rollout_helm_release")
-        rollout_namespace = cfg.get("rollout_helm_namespace", namespace)
-        rollout_update_values = cfg.get("rollout_update_values", update_values)
-
-        # Параметры для umbrella-чарта сервисов (опционально)
-        services_umbrella_chart_path = cfg.get("services_umbrella_chart_path")
-        services_umbrella_release = cfg.get("services_umbrella_release")
-        services_umbrella_namespace = cfg.get("services_umbrella_namespace", namespace)
         
         # Автоинкремент версии
         if auto_version:
@@ -223,14 +171,14 @@ def main():
             run(["docker", "push", dockerhub_image])
             print(f"✅ Образ запушен: {dockerhub_image}")
         
-        # Обновление values.yaml основного чарта (если он сконфигурирован)
-        if update_values and helm_chart_path and release:
-            print("\n=== ОБНОВЛЕНИЕ values.yaml ===")
+        # Обновление values файла (если включено)
+        if update_values:
+            print("\n=== ОБНОВЛЕНИЕ values ФАЙЛА ===")
             yaml_ruamel = YAML()
             yaml_ruamel.preserve_quotes = True
             yaml_ruamel.default_flow_style = False
             
-            values_path = Path(helm_chart_path) / "values.yaml"
+            values_path = Path(values_file_path)
             
             with open(values_path, "r") as f:
                 values = yaml_ruamel.load(f)
@@ -245,75 +193,18 @@ def main():
             with open(values_path, "w") as f:
                 yaml_ruamel.dump(values, f)
             
-            print(f"✅ values.yaml (основной чарт) обновлен: repository={values['image']['repository']}, tag={values['image']['tag']}")
+            print(f"✅ Values файл обновлен: repository={values['image']['repository']}, tag={values['image']['tag']}")
 
-        # Helm upgrade для основного чарта (если он сконфигурирован)
-        if helm_chart_path and release:
-            print("\n=== HELM UPGRADE (основной чарт) ===")
-            run([
-                "helm", "upgrade", "--install",
-                release,
-                helm_chart_path,
-                "-n", namespace
-            ])
-            print(f"✅ Helm upgrade выполнен: {release} в namespace {namespace}")
-
-        # Обновление rollout-чарта (если сконфигурирован)
-        if rollout_helm_chart_path and rollout_release:
-            # Обновление values.yaml rollout-чарта
-            if rollout_update_values:
-                print("\n=== ОБНОВЛЕНИЕ values.yaml (rollout-чарт) ===")
-                yaml_ruamel = YAML()
-                yaml_ruamel.preserve_quotes = True
-                yaml_ruamel.default_flow_style = False
-
-                rollout_values_path = Path(rollout_helm_chart_path) / "values.yaml"
-
-                with open(rollout_values_path, "r") as f:
-                    rollout_values = yaml_ruamel.load(f)
-
-                if 'image' not in rollout_values or not isinstance(rollout_values['image'], dict):
-                    rollout_values['image'] = {}
-
-                rollout_values['image']['repository'] = f"{registry}/{name}"
-                rollout_values['image']['tag'] = str(tag)
-
-                with open(rollout_values_path, "w") as f:
-                    yaml_ruamel.dump(rollout_values, f)
-
-                print(f"✅ values.yaml (rollout-чарт) обновлен: repository={rollout_values['image']['repository']}, tag={rollout_values['image']['tag']}")
-
-            # Helm upgrade для rollout-чарта (только если НЕТ umbrella-чарта)
-            # Если есть umbrella-чарт, все сервисы управляются через него
-            if not (services_umbrella_chart_path and services_umbrella_release):
-                print("\n=== HELM UPGRADE (rollout-чарт) ===")
-                run([
-                    "helm", "upgrade", "--install",
-                    rollout_release,
-                    rollout_helm_chart_path,
-                    "-n", rollout_namespace
-                ])
-                print(f"✅ Helm upgrade выполнен: {rollout_release} в namespace {rollout_namespace}")
-            else:
-                print("\n⚠️  Пропускаем отдельный helm upgrade для rollout-чарта (используется umbrella-чарт)")
-
-        # Helm upgrade для umbrella-чарта сервисов (если сконфигурирован)
-        if services_umbrella_chart_path and services_umbrella_release:
-            print("\n=== ПОДГОТОВКА ЗАВИСИМОСТЕЙ ДЛЯ UMBRELLA-ЧАРТА СЕРВИСОВ ===")
-            # Пересобираем зависимости, чтобы подтянуть обновленные локальные сабчарты
-            run([
-                "helm", "dependency", "build",
-                services_umbrella_chart_path,
-            ])
-
-            print("\n=== HELM UPGRADE (umbrella-чарт сервисов) ===")
-            run([
-                "helm", "upgrade", "--install",
-                services_umbrella_release,
-                services_umbrella_chart_path,
-                "-n", services_umbrella_namespace
-            ])
-            print(f"✅ Helm upgrade выполнен: {services_umbrella_release} в namespace {services_umbrella_namespace}")
+        # Helm upgrade
+        print("\n=== HELM UPGRADE ===")
+        run([
+            "helm", "upgrade", "--install",
+            release,
+            helm_chart_path,
+            "-f", values_file_path,
+            "-n", namespace
+        ])
+        print(f"✅ Helm upgrade выполнен: {release} в namespace {namespace}")
         
         print("\n" + "=" * 50)
         print("✅ ДЕПЛОЙ УСПЕШНО ЗАВЕРШЕН")
@@ -321,6 +212,50 @@ def main():
         print(f"📦 Образ: {yandex_image}")
         print(f"🚀 Release: {release}")
         print(f"📁 Namespace: {namespace}")
+        
+        # Git push после успешного деплоя
+        print("\n=== GIT PUSH ===")
+        try:
+            # Определяем корень git репозитория
+            script_dir = Path(__file__).parent.absolute()
+            repo_root = script_dir
+            # Ищем .git директорию, поднимаясь вверх по дереву
+            while repo_root != repo_root.parent:
+                if (repo_root / ".git").exists():
+                    break
+                repo_root = repo_root.parent
+            else:
+                print("⚠️  Git репозиторий не найден, пропускаем git push")
+                return
+            
+            # Проверяем, есть ли изменения для коммита
+            status_result = subprocess.run(
+                ["git", "status", "--porcelain"],
+                cwd=repo_root,
+                capture_output=True,
+                text=True
+            )
+            
+            if status_result.stdout.strip():
+                print("📝 Обнаружены изменения в репозитории")
+                # Добавляем все изменения
+                run(["git", "add", "-A"], cwd=repo_root)
+                # Коммитим изменения
+                commit_message = f"Deploy {name}:{tag}"
+                run(["git", "commit", "-m", commit_message], cwd=repo_root)
+                print(f"✅ Изменения закоммичены: {commit_message}")
+            else:
+                print("ℹ️  Нет изменений для коммита")
+            
+            # Push в ветку lesson
+            run(["git", "push", "origin", "lesson"], cwd=repo_root)
+            print("✅ Изменения запушены в origin/lesson")
+        except RuntimeError as git_error:
+            print(f"⚠️  Ошибка при выполнении git push: {git_error}")
+            print("⚠️  Деплой завершен успешно, но git push не выполнен")
+        except Exception as git_error:
+            print(f"⚠️  Непредвиденная ошибка при git push: {git_error}")
+            print("⚠️  Деплой завершен успешно, но git push не выполнен")
         
     except (RuntimeError, ValueError, FileNotFoundError) as e:
         print(f"\n❌ ОШИБКА: {e}")

@@ -1,0 +1,116 @@
+# =============================================================================
+# VALUES ДЛЯ REVIEWS-SERVICE
+# =============================================================================
+# Использование:
+#   helm install reviews ../python-service-chart -f reviews-service.yaml
+# =============================================================================
+
+serviceName: reviews-service
+namespace: lesson4356
+
+image:
+  repository: cr.yandex/crpiqtsurn6alildl4cb/reviews-service
+  tag: "8.0"
+
+replicaCount: 2
+
+service:
+  type: NodePort
+  port: 8004
+  targetPort: 8004
+  nodePort: 30004
+
+ports:
+  - name: http-metrics    # ← Имя порта для ServiceMonitor
+    port: 8004
+    targetPort: 8004
+    protocol: TCP
+    nodePort: 30009   
+
+config:
+  PORT: "8004"
+  LOG_LEVEL: "INFO"
+  LOG_FORMAT: "json"
+  METRICS_ENABLED: "true"
+  USERS_SERVICE_URL: "http://users-service-service:8003"
+  PRODUCTS_SERVICE_URL: "http://products-service-service:8001"
+  ORDERS_SERVICE_URL: "http://orders-service-service:8002"
+  POSTGRES_HOST: "postgres"
+  POSTGRES_PORT: "5432"
+  POSTGRES_DB: "reviews"
+
+secret:
+  POSTGRES_USER: "user"
+  POSTGRES_PASSWORD: "password"
+  POSTGRES_DB: "reviews"
+
+strategy:
+  canary:
+    steps:
+      - setWeight: 20
+      - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: "{{ .Release.Name }}-success-rate-analysis"
+      - setWeight: 50
+      - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: "{{ .Release.Name }}-success-rate-analysis"
+      - setWeight: 80
+      - pause: { duration: 30s }
+      - analysis:
+          templates:
+            - templateName: "{{ .Release.Name }}-success-rate-analysis"
+
+# ============================================================================
+# ГЛОБАЛЬНЫЕ НАСТРОЙКИ
+# ============================================================================
+
+# ============================================================================
+# ANALYSIS - настройки проверки здоровья при canary deployment
+# ============================================================================
+analysis:
+  # Включить/выключить создание AnalysisTemplate
+  enabled: true
+
+  # Адрес Prometheus сервера
+  prometheusAddress: "http://kube-prometheus-stack-prometheus.lesson4356.svc.cluster.local:9090"
+  # Порог успешности (0.99 = 99% запросов без 5xx ошибок)
+  successThreshold: 0.99
+
+  # Сколько провалов допускается перед rollback
+  failureLimit: 3
+
+  # Интервал между проверками
+  interval: 30s
+
+  # Количество проверок на каждом шаге canary
+  # (3 проверки × 30s = 90 секунд анализа на каждом шаге)
+  count: 3
+
+
+livenessProbe:
+  path: /live
+  port: 8004
+  initialDelaySeconds: 15
+  periodSeconds: 5
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  path: /ready
+  port: 8004
+  initialDelaySeconds: 30
+  periodSeconds: 5
+  timeoutSeconds: 3
+  failureThreshold: 6
+
+resources:
+  requests:
+    memory: "256Mi"
+    cpu: "250m"
+  limits:
+    memory: "512Mi"
+    cpu: "1000m"
+

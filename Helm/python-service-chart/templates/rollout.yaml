@@ -13,7 +13,7 @@ spec:
   strategy:
     canary:
       steps:
-        {{- toYaml .Values.strategy.canary.steps | nindent 8 }}
+        {{- tpl (toYaml .Values.strategy.canary.steps) . | nindent 8 }}
   template:
     metadata:
       labels:
@@ -27,6 +27,46 @@ spec:
           envFrom:
             - configMapRef:
                 name: {{ .Values.serviceName }}-config
+            {{- if .Values.secret }}
+            - secretRef:
+                name: {{ .Values.serviceName }}-secret
+            {{- end }}
+
+          {{- if .Values.livenessProbe }}
+          livenessProbe:
+            httpGet:
+              path: {{ .Values.livenessProbe.path }}
+              port: {{ .Values.livenessProbe.port }}
+            initialDelaySeconds: {{ .Values.livenessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.livenessProbe.periodSeconds }}
+            {{- if .Values.livenessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ .Values.livenessProbe.timeoutSeconds }}
+            {{- end }}
+            {{- if .Values.livenessProbe.failureThreshold }}
+            failureThreshold: {{ .Values.livenessProbe.failureThreshold }}
+            {{- end }}
+          {{- end }}
+
+          {{- if .Values.readinessProbe }}
+          readinessProbe:
+            httpGet:
+              path: {{ .Values.readinessProbe.path }}
+              port: {{ .Values.readinessProbe.port }}
+            initialDelaySeconds: {{ .Values.readinessProbe.initialDelaySeconds }}
+            periodSeconds: {{ .Values.readinessProbe.periodSeconds }}
+            {{- if .Values.readinessProbe.timeoutSeconds }}
+            timeoutSeconds: {{ .Values.readinessProbe.timeoutSeconds }}
+            {{- end }}
+            {{- if .Values.readinessProbe.failureThreshold }}
+            failureThreshold: {{ .Values.readinessProbe.failureThreshold }}
+            {{- end }}
+          {{- end }}
+
+          {{- if .Values.resources }}
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          {{- end }}
+    
             # TODO: раскомментировать после создания secret.yaml
             # - secretRef:
             #     name: {{ .Values.serviceName }}-secret
