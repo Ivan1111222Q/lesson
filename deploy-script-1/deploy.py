@@ -64,7 +64,10 @@ def main():
                 run(["git", "add", "-A"], cwd=repo)
                 run(["git", "commit", "-m", f"Deploy {name}:{tag}"], cwd=repo)
             run(["git", "push", "origin", git_branch], cwd=repo)
-        print(f"Git push готов в ветку {git_branch}")    
+        print(f"✅ Git push готов в ветку {git_branch}")
+    except Exception as e:
+        print(f"❌ Ошибка: {e}")
+        sys.exit(1)        
         
         print(f"✅ Готово: {remote_img}")
     except Exception as e:
