@@ -20,6 +20,7 @@ namespace: default
 image:
   repository: my-registry/my-service
   tag: "latest"
+  pullPolicy: IfNotPresent  # По умолчанию IfNotPresent, можно переопределить в values/<service>.yaml
 
 # =============================================================================
 # REPLICAS
@@ -62,25 +63,25 @@ strategy:
 # =============================================================================
 # TODO: PROBES (добавить в templates/rollout.yaml)
 # =============================================================================
-# livenessProbe:
-#   path: /live
-#   port: 8000
-#   initialDelaySeconds: 15
-#   periodSeconds: 5
+livenessProbe:
+  path: /live
+  port: 8000
+  initialDelaySeconds: 15
+  periodSeconds: 5
 
-# readinessProbe:
-#   path: /ready
-#   port: 8000
-#   initialDelaySeconds: 10
-#   periodSeconds: 3
+readinessProbe:
+  path: /ready
+  port: 8000
+  initialDelaySeconds: 10
+  periodSeconds: 3
 
 # =============================================================================
 # TODO: RESOURCES (добавить в templates/rollout.yaml)
 # =============================================================================
-# resources:
-#   requests:
-#     memory: "128Mi"
-#     cpu: "100m"
-#   limits:
-#     memory: "256Mi"
-#     cpu: "500m"
+resources:
+  requests:
+    memory: "128Mi"
+    cpu: "100m"
+  limits:
+    memory: "256Mi"
+    cpu: "500m"

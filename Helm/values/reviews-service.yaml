@@ -11,6 +11,7 @@ namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/reviews-service
   tag: "8.0"
+  pullPolicy: Always  # Всегда загружать новый образ (для разработки)
 
 replicaCount: 2
 

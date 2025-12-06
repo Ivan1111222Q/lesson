@@ -18,6 +18,7 @@ namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/products-service
   tag: "2.13"
+  pullPolicy: Always  # Всегда загружать новый образ (для разработки)
 
 replicaCount: 2
 

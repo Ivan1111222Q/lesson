@@ -25,6 +25,7 @@ namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/users-service
   tag: "2.31"
+  pullPolicy: Always  # Всегда загружать новый образ (для разработки)
 
 # -----------------------------------------------------------------------------
 # КОЛИЧЕСТВО РЕПЛИК
