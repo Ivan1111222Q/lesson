@@ -110,7 +110,7 @@ livenessProbe:
   failureThreshold: 3
 
 readinessProbe:
-  path: /ready
+  path: /health
   port: 8002
   initialDelaySeconds: 30
   periodSeconds: 5

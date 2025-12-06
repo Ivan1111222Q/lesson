@@ -122,6 +122,7 @@ def main():
         namespace = cfg["helm_namespace"]
         auto_version = cfg.get("auto_version", False)
         update_values = cfg.get("update_values", False)
+        git_branch = cfg.get("git_branch", "lesson")  # Ветка для git push (по умолчанию "lesson")
         
         # Автоинкремент версии
         if auto_version:
@@ -247,9 +248,9 @@ def main():
             else:
                 print("ℹ️  Нет изменений для коммита")
             
-            # Push в ветку lesson
-            run(["git", "push", "origin", "lesson"], cwd=repo_root)
-            print("✅ Изменения запушены в origin/lesson")
+            # Push в указанную ветку
+            run(["git", "push", "origin", git_branch], cwd=repo_root)
+            print(f"✅ Изменения запушены в origin/{git_branch}")
         except RuntimeError as git_error:
             print(f"⚠️  Ошибка при выполнении git push: {git_error}")
             print("⚠️  Деплой завершен успешно, но git push не выполнен")

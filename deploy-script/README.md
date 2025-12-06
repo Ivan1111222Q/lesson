@@ -85,6 +85,9 @@ auto_version: true
 
 # Обновлять values файл (только image.repository и image.tag)
 update_values: true
+
+# Ветка для git push (по умолчанию "lesson")
+git_branch: lesson
 ```
 
 ### Параметры конфигурации
@@ -102,6 +105,7 @@ update_values: true
 | `helm_namespace` | ✅ | Kubernetes namespace |
 | `auto_version` | ❌ | Автоинкремент версии (по умолчанию `false`) |
 | `update_values` | ❌ | Обновлять values файл (по умолчанию `false`) |
+| `git_branch` | ❌ | Ветка для git push (по умолчанию `lesson`) |
 
 ### Примеры конфигурации для разных сервисов
 
@@ -281,9 +285,19 @@ lesson8/
 1. Ищет корень git репозитория (поднимается вверх по дереву до `.git`)
 2. Проверяет наличие изменений
 3. Если есть изменения - делает `git add -A` и коммит с сообщением `Deploy {image}:{tag}`
-4. Выполняет `git push origin lesson`
+4. Выполняет `git push origin {git_branch}` (ветка указывается в `git_branch` в конфиге)
 
 Если git операция не удалась, деплой считается успешным, но выводится предупреждение.
+
+**Настройка ветки для push:**
+```yaml
+# В deploy_config.yaml
+git_branch: lesson    # По умолчанию
+# или
+git_branch: main     # Для ветки main
+# или
+git_branch: develop  # Для ветки develop
+```
 
 ---
 

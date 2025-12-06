@@ -24,7 +24,7 @@ namespace: lesson4356
 # tag — версия образа (рекомендуется использовать конкретную версию, не latest)
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/users-service
-  tag: "2.25"
+  tag: "2.26"
 
 # -----------------------------------------------------------------------------
 # КОЛИЧЕСТВО РЕПЛИК
@@ -164,7 +164,7 @@ livenessProbe:
   failureThreshold: 3
 
 readinessProbe:
-  path: /ready
+  path: /health
   port: 8003
   initialDelaySeconds: 30
   periodSeconds: 5
