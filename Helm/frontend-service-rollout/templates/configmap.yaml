@@ -21,22 +21,22 @@ data:
 
         # Upstream для бэкенд-сервисов
         upstream products_backend {
-            server products-service-rollout-service:8001;
+            server products-service-service:8001;
             keepalive 32;
         }
 
         upstream orders_backend {
-            server orders-service-rollout-service:8002;
+            server orders-service-service:8002;
             keepalive 32;
         }
 
         upstream users_backend {
-            server users-service-rollout-service:8003;
+            server users-service-service:8003;
             keepalive 32;
         }
 
         upstream reviews_backend {
-            server reviews-service-rollout-service:8004;
+            server reviews-service-service:8004;
             keepalive 32;
         }
 
