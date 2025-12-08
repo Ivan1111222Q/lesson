@@ -14,7 +14,7 @@ spec:
   source:
     repoURL: git@github.com:FerapontovAnton/lesson4356.git  # Git-репозиторий с chart'ом и values
     targetRevision: argocd          # Следить за актуальной веткой (можно зафиксировать тег/branch)
-    path: /Helm/postgres # Путь до Helm-чарта для python-сервисов
+    path: Helm/postgres # Путь до Helm-чарта для python-сервисов
     helm:
       releaseName: postgres # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
       valueFiles:
