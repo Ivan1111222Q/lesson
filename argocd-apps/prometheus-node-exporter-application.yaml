@@ -18,7 +18,7 @@ spec:
     helm:
       releaseName: prometheus-node-exporter  # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
       valueFiles:
-        - ../values.yaml # Подключаем сервис-специфичные values; путь относительно директории chart'а
+        - ./values.yaml # Подключаем сервис-специфичные values; путь относительно директории chart'а
   destination:
     server: https://kubernetes.default.svc # Деплой в текущий кластер, куда установлено Argo CD
     namespace: lesson4356           # Namespace, в который уйдут все ресурсы сервиса
