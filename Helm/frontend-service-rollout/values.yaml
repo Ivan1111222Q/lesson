@@ -44,19 +44,10 @@ strategy:
     steps:
       - setWeight: 20
       - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: success-rate-analysis
       - setWeight: 50
       - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: success-rate-analysis
       - setWeight: 80
       - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: success-rate-analysis
 
 # ============================================================================
 # ГЛОБАЛЬНЫЕ НАСТРОЙКИ
