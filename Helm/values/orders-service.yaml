@@ -13,7 +13,7 @@ image:
   tag: "5.0"
   pullPolicy: Always  # Всегда загружать новый образ (для разработки)
 
-replicaCount: 2
+replicaCount: 4
 
 service:
   type: NodePort
