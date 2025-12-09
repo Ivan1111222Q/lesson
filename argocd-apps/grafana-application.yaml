@@ -16,7 +16,7 @@ spec:
     targetRevision: argocd          # Следить за актуальной веткой (можно зафиксировать тег/branch)
     path: Helm/grafana # Путь до Helm-чарта для python-сервисов
     helm:
-      releaseName: kibana # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
+      releaseName: grafana # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
       valueFiles:
         - ./values.yaml # Подключаем сервис-специфичные values; путь относительно директории chart'а
   destination:
