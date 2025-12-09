@@ -19,7 +19,7 @@ environmentVariables:
   POSTGRES_USER: user
   POSTGRES_PASSWORD: password
   POSTGRES_DB: reviews
-  PGDATA: /var/lib/postgresql/data/pgdata
+  # PGDATA будет установлен автоматически из volume.mountPath
 
 
 serviceAccount:
@@ -31,12 +31,13 @@ serviceAccount:
 
 podAnnotations: {}
 
-podSecurityContext: {}
-  # fsGroup: 2000
+podSecurityContext:
+  fsGroup: 0
+  # fsGroup: 2000  # Можно использовать 999 (postgres user), но 0 работает для root
 
 securityContext:
   runAsUser: 0
-  fsGroup: 0
+  # fsGroup должен быть в podSecurityContext, а не в securityContext контейнера
   # capabilities:
   #   drop:
   #   - ALL
@@ -87,7 +88,7 @@ volume:
   className: ""
   size: 3Gi
   mountPath: /var/lib/postgresql/data
-  subPath: "postgres-data"
+  subPath: "pgdata"
 
 tests:
   enabled: true

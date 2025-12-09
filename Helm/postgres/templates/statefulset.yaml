@@ -69,6 +69,9 @@ spec:
           volumeMounts:
             - mountPath: {{ .Values.volume.mountPath | quote }}
               name: postgres-volume
+              {{- if .Values.volume.subPath }}
+              subPath: {{ .Values.volume.subPath | quote }}
+              {{- end }}
           {{- end }}
           resources:
             {{- toYaml .Values.resources | nindent 12 }}
@@ -79,7 +82,7 @@ spec:
           {{- end }}
           {{- if .Values.volume.enabled }}
           - name: PGDATA
-            value: {{ .Values.volume.mountPath | quote }}
+            value: {{ printf "%s/%s" .Values.volume.mountPath (.Values.volume.subPath | default "pgdata") | quote }}
           {{- end }}
       {{- with .Values.nodeSelector }}
       nodeSelector:
