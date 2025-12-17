@@ -85,4 +85,4 @@ deploy-helm:
     - if: '$CI_COMMIT_BRANCH == "argocd"'
     # И позволить ручной запуск из UI
     - when: manual
-      allow_failure: false# Trigger CI/CD
+      allow_failure: false
