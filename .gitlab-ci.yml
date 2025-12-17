@@ -86,3 +86,4 @@ deploy-helm:
     # И позволить ручной запуск из UI
     - when: manual
       allow_failure: false
+
