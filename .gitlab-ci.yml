@@ -70,6 +70,7 @@ deploy-helm:
         -n "${KUBE_NAMESPACE}" \
         -f ./Helm/values/reviews-service.yaml
 
+      # Users rollout
     - helm upgrade --install users "${HELM_RELEASE_PREFIX}-users" ./Helm/python-service-chart \
         -n "${KUBE_NAMESPACE}" \
         -f ./Helm/values/users-service.yaml
