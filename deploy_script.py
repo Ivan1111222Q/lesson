@@ -241,7 +241,27 @@ def helm_frontend():
             print("❌ Ошибка при установке Helm Chart frontend")
             sys.exit(1)
         else:
-            print("✅ Helm Chart frontend установлен")                   
+            print("✅ Helm Chart frontend установлен")   
+
+def check():
+    # Проверка, что все сервисы работают
+    service = run_command("kubectl get pods -n lesson4356 -o wide", check=False)
+    if "frontend" in service.stdout.lower():
+        print("✅Helm frontend-service установлен")
+    else:
+        print("❌ Helm Chart frontend не найден")
+
+    if "orders" in service.stdout.lower():
+        print("✅Helm orders-service установлен")
+    else:
+        print("❌ Helm Chart orders не найден")
+
+    if "products" in service.stdout.lower():
+        print("✅Helm products-service установлен")
+    else:
+        print("❌ Helm Chart products не найден")
+                    
+
 
 
 def main():
@@ -276,6 +296,8 @@ def main():
       helm_orders()
       print("\n🔍Установка Helm Chart - frontend...")
       helm_frontend()
+      print("\n🔍Проверка...")
+      check()
 
 
 

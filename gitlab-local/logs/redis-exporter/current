@@ -1,6 +1,0 @@
-2025-12-16_12:38:52.57483 time="2025-12-16T12:38:52Z" level=info msg="Redis Metrics Exporter 1.58.0    build date:     sha1:     Go: go1.21.9    GOOS: linux    GOARCH: amd64"
-2025-12-16_12:38:52.62125 time="2025-12-16T12:38:52Z" level=info msg="Providing metrics at localhost:9121/metrics"
-2025-12-16_12:39:57.38832 time="2025-12-16T12:39:57Z" level=info msg="Received terminated signal, exiting"
-2025-12-16_12:39:57.39423 time="2025-12-16T12:39:57Z" level=info msg="Server shut down gracefully"
-2025-12-16_12:39:57.49324 time="2025-12-16T12:39:57Z" level=info msg="Redis Metrics Exporter 1.58.0    build date:     sha1:     Go: go1.21.9    GOOS: linux    GOARCH: amd64"
-2025-12-16_12:39:57.53374 time="2025-12-16T12:39:57Z" level=info msg="Providing metrics at localhost:9121/metrics"

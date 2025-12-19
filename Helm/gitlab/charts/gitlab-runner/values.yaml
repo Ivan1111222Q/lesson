@@ -72,13 +72,13 @@ readinessProbe: {}
 ## The GitLab Server URL (with protocol) that want to register the runner against
 ## ref: https://docs.gitlab.com/runner/commands/index.html#gitlab-runner-register
 ##
-# gitlabUrl: https://gitlab.your-domain.com/
+gitlabUrl: http://gitlab-webservice-default.lesson4356.svc.cluster.local:8080
 
 ## The Runner Token for adding new Runners to the GitLab Server. This must
 ## be retrieved from your GitLab instance. It is the token of an already registered runner.
 ## ref: (we don't have docs for that yet, but we want to use an existing token)
 ##
-# runnerToken: ""
+runnerToken: "glrt-Xnjv52-mV-Tg5_ssGq9lKG86MQpwOjIKdDozCnU6MQ8.01.1716zwhwg"
 #
 
 ## Unregister all runners before termination

@@ -60,8 +60,8 @@ global:
     allowClusterRoles: true
   ## https://docs.gitlab.com/charts/charts/globals#configure-host-settings
   hosts:
-    # минимальный локальный домен для GitLab в кластере
-    domain: lesson.local
+    # домен для GitLab
+    domain: example.com
     hostSuffix:
     # отключаем HTTPS, пока нет TLS/ingress
     https: false
@@ -84,10 +84,10 @@ global:
     configureCertmanager: false
     useNewIngressForCerts: false
     provider: nginx
-    # class:
+    class: nginx
     annotations: {}
-    # временно отключаем Ingress, будем ходить по Service/Port-Forward
-    enabled: false
+    # Включаем Ingress для доступа через LoadBalancer
+    enabled: true
     tls: {}
     #   enabled: true
     #   secretName:
