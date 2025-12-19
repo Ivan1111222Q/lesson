@@ -1,6 +1,0 @@
-apiVersion: v2
-name: gitlab-runner
-description: GitLab Runner for Kubernetes CI/CD
-type: application
-version: 0.1.0
-appVersion: "latest"
