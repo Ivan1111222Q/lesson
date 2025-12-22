@@ -51,7 +51,3 @@ Thumbs.db
 .env.local
 
 
-# Игнорить папки с логами
-**/logs/
-gitlab-local/data/nginx/logs/
-*.log
