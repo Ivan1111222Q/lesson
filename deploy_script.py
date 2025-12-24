@@ -195,11 +195,16 @@ def helm_reviews():
     else:
         print("ℹ️ Helm Chart reviews не найден, устанавливаю...")
         install_result = run_command("helm upgrade --install reviews ./Helm/python-service-chart -f ./Helm/values/reviews-service.yaml -n lesson4356 --wait", check=False)
+
         if install_result.returncode != 0:
             print("❌ Ошибка при установке Helm Chart reviews")
             sys.exit(1)
         else:
             print("✅ Helm Chart reviews установлен")
+            
+            
+
+
 
 def helm_products():
     # Загрузка Helm Chart -  service
@@ -261,7 +266,52 @@ def check():
     else:
         print("❌ Helm Chart products не найден")
                     
+def service_ls():
+    """Получить список сервисов из Helm values"""
+    ls = os.listdir('./Helm/values')
+    return ls
 
+def argocd_apps(servic_ls):
+    """Установить существующие ArgoCD приложения из ./argocd-apps"""
+    print("\n🔍Установка ArgoCD приложений...")
+    
+    # Проверяем, существует ли директория argocd-apps
+    if not os.path.exists('./argocd-apps'):
+        print("❌ Директория ./argocd-apps не найдена")
+        return
+    
+    ls = os.listdir('./argocd-apps')
+
+    for i in ls:  # i - файл приложения из ./argocd-apps
+        for j in servic_ls:  # j - файл сервиса из ./Helm/values
+            
+            # Проверяем совпадение имен
+            if j.split(".")[0] + "-application" in i.split(".")[0]:
+                app_name = j.split(".")[0] + "-application"
+                print(f"\n📦 Найден: {app_name} ({i})")
+                
+                # 1. Сначала проверяем, установлено ли уже приложение
+                check_cmd = f"kubectl get applications {app_name} -n argo-cd"
+                check_result = run_command(check_cmd, check=False)
+                
+                # Если приложение найдено (код возврата 0 = успех)
+                if check_result.returncode == 0:
+                    print(f"   ✅ Приложение {app_name} уже установлено в кластере")
+                    break  # переходим к следующему файлу приложения
+                
+                # 2. Если не установлено - устанавливаем
+                apply_cmd = f"kubectl apply -f ./argocd-apps/{i} -n argo-cd"
+                print(f"   🚀 Команда: {apply_cmd}")
+                print("   ⏳ Устанавливаю...")
+                
+                apply_result = run_command(apply_cmd, check=False)
+                
+                # Проверяем результат установки
+                if apply_result.returncode == 0:
+                    print(f"   ✅ Приложение {app_name} успешно установлено!")
+                else:
+                    print(f"   ❌ Ошибка при установке {app_name}:")
+                    
 
 
 def main():
@@ -298,6 +348,8 @@ def main():
       helm_frontend()
       print("\n🔍Проверка...")
       check()
+      print("\n🔍Установка ArgoCD приложений...")
+      argocd_apps(service_ls())
 
 
 
