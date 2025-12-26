@@ -29,4 +29,5 @@ spec:
     syncOptions:
       - CreateNamespace=true        # Создавать namespace автоматически, если его нет
       - PrunePropagationPolicy=foreground # Ждём удаления дочерних ресурсов при prune (без "зависших" объектов)
+      # - ServerSideApply=true
       - ApplyOutOfSyncOnly=true     # Применять только изменённые ресурсы, ускоряя синк
