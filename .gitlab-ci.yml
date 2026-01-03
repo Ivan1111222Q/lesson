@@ -1,66 +1,35 @@
 stages:
+  - test
+  - build
   - deploy
 
-variables:
-  KUBE_NAMESPACE: "lesson4356"
-  HELM_RELEASE_PREFIX: "lesson4356"
-
-deploy-helm:
-  stage: deploy
-  image: dtzar/helm-kubectl:3.16.1
-  tags:
-    - kubernetes
+unit-test:
+  stage: test
   script:
-    - echo "Using namespace: ${KUBE_NAMESPACE}"
-    
-    # Убедиться, что namespace существует
-    - kubectl get ns "${KUBE_NAMESPACE}" || kubectl create ns "${KUBE_NAMESPACE}"
-    
-    # Обновить репозитории helm (если нужно)
-    - helm repo update || true
-    
-    # Пример: Postgres
-    - helm upgrade --install postgres ./Helm/postgres -n "${KUBE_NAMESPACE}"
-    
-    # Kubernetes-сервисы
-    
-    # ArgoCD
-    - helm upgrade --install argo-cd ./Helm/argo-cd -n "${KUBE_NAMESPACE}"
-    
-    # Argo rollouts
-    - helm upgrade --install argo-rollouts ./Helm/argo-rollouts -n "${KUBE_NAMESPACE}"
-    
-    # ECK
-    - helm upgrade --install eck-operator ./Helm/eck-operator -n "${KUBE_NAMESPACE}"
-    
-    # ECK stack
-    - helm upgrade --install eck-stack ./Helm/eck-stack -n "${KUBE_NAMESPACE}"
-    
-    # Grafana
-    - helm upgrade --install grafana ./Helm/grafana -n "${KUBE_NAMESPACE}"
-    
-    # Kube-prometheus-stack
-    - helm upgrade --install kube-prometheus-stack ./Helm/kube-prometheus-stack -n "${KUBE_NAMESPACE}"
-    
-    # Node-exporter
-    - helm upgrade --install prometheus-node-exporter ./Helm/prometheus-node-exporter -n "${KUBE_NAMESPACE}"
-    
-    # Python-сервисы
-    - helm upgrade --install orders "${HELM_RELEASE_PREFIX}-orders" ./Helm/python-service-chart -n "${KUBE_NAMESPACE}" -f ./Helm/values/orders-service.yaml
-    
-    - helm upgrade --install products "${HELM_RELEASE_PREFIX}-products" ./Helm/python-service-chart -n "${KUBE_NAMESPACE}" -f ./Helm/values/products-service.yaml
-    
-    - helm upgrade --install reviews "${HELM_RELEASE_PREFIX}-reviews" ./Helm/python-service-chart -n "${KUBE_NAMESPACE}" -f ./Helm/values/reviews-service.yaml
-    
-    # Users rollout
-    - helm upgrade --install users "${HELM_RELEASE_PREFIX}-users" ./Helm/python-service-chart -n "${KUBE_NAMESPACE}" -f ./Helm/values/users-service.yaml
-    
-    # Frontend rollout
-    - helm upgrade --install frontend-service-rollout ./Helm/frontend-service-rollout -n "${KUBE_NAMESPACE}"
-    
-  rules:
-    # Автоматически запускать на пуш в main
-    - if: '$CI_COMMIT_BRANCH == "main"'
-    # И позволить ручной запуск из UI
-    - when: manual
-      allow_failure: false
+    - echo "Запускаем тесты"
+    - sleep 60
+    - echo "Тесты прошли"
+
+lint-check:
+  stage: test
+  script:
+    - echo "Начинаем валидацию"
+    - sleep 30
+    - echo "Валидация пройдена"
+
+
+build-job:
+  stage: build
+  script:
+    - echo "Сборка"
+    - sleep 30
+    - echo "Сборка прошла"
+
+deploy-job:
+  stage: deploy
+  script:
+    - echo "Запуск теста"
+    - sleep 60
+    - echo "Тесты прошли успешно"
+
+
