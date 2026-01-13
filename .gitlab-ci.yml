@@ -8,7 +8,6 @@ test-connection:
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - echo "Создаю kubeconfig файл..."
     - echo "$KUBECONFIG_CONTENT" > /tmp/config.yaml
-    - echo "Файл создан. Размер: $(wc -c < /tmp/config.yaml) байт"
     - echo "Пробую подключиться к кластеру..."
     - kubectl --kubeconfig=/tmp/config.yaml cluster-info --request-timeout=30s
     - echo "Получаю список узлов..."
