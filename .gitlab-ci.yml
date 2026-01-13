@@ -4,16 +4,6 @@ stages:
 
 claster-connection:
   stage: test
-  image: bitnami/kubectl:latest
-  entrypoint: [""]  # Переопределяем entrypoint, чтобы использовать shell
-  before_script:
-    - echo "🔧 Проверка kubectl..."
-    - |
-      # Находим kubectl в образе
-      if [ -f /opt/bitnami/kubectl/bin/kubectl ]; then
-        export PATH="/opt/bitnami/kubectl/bin:$PATH"
-      fi
-      kubectl version --client
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
