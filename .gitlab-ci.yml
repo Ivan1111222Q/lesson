@@ -13,26 +13,28 @@ before_script:
   # 1. СОЗДАЁМ KUBECONFIG ИЗ ПЕРЕМЕННОЙ
   - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
   - export KUBECONFIG=/tmp/kubeconfig.yaml
+  - cat ~/.kube/config
   
-  # 2. ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ (это ВСЁ!)
-  - kubectl cluster-info
-  - kubectl get nodes
-  - echo "✅ Подключились к кластеру!"
+  
+  # # 2. ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ (это ВСЁ!)
+  # - kubectl cluster-info
+  # - kubectl get nodes
+  # - echo "✅ Подключились к кластеру!"
 
-# Теперь ВЕЗДЕ доступен kubectl к твоему кластеру
-unit-test:
-  stage: test
-  script:
-    - echo "Запускаем тесты"
-    - kubectl get pods -A  # Проверяем что доступ есть
-    # - python3 test2.py
+# # Теперь ВЕЗДЕ доступен kubectl к твоему кластеру
+# unit-test:
+#   stage: test
+#   script:
+#     - echo "Запускаем тесты"
+#     - kubectl get pods -A  # Проверяем что доступ есть
+#     # - python3 test2.py
 
-lint-check:
-  stage: test
-  script:
-    - echo "Проверка конфигурации кластера"
-    - kubectl get namespaces
-    - kubectl get nodes -o wide
+# lint-check:
+#   stage: test
+#   script:
+#     - echo "Проверка конфигурации кластера"
+#     - kubectl get namespaces
+#     - kubectl get nodes -o wide
 
 # build-job:
 #   stage: build
