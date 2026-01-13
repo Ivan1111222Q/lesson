@@ -1,117 +1,28 @@
 stages:
   - test
-  - build
-  - deploy
-
-# =============================================================================
-# TEST STAGE
-# =============================================================================
 
 test-connection:
   stage: test
   image: bitnami/kubectl:latest
-  variables:
-    # Используем образ с yc CLI или установим его
-    YC_CLI_VERSION: "latest"
-  before_script:
-    - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
-    - echo "🔧 Настройка kubeconfig..."
-    - |
-      # Отладочная информация
-      echo "🔍 Отладка переменных окружения:"
-      echo "   KUBECONFIG_BASE64 установлена: $([ -n "$KUBECONFIG_BASE64" ] && echo 'ДА' || echo 'НЕТ')"
-      echo "   KUBECONFIG установлена: $([ -n "$KUBECONFIG" ] && echo 'ДА' || echo 'НЕТ')"
-      echo "   KUBECONFIG_CONTENT установлена: $([ -n "$KUBECONFIG_CONTENT" ] && echo 'ДА' || echo 'НЕТ')"
-      echo "   Длина KUBECONFIG_BASE64: ${#KUBECONFIG_BASE64}"
-      echo "   Длина KUBECONFIG_CONTENT: ${#KUBECONFIG_CONTENT}"
-      echo ""
-      
-      # Создание kubeconfig из переменной окружения
-      mkdir -p ~/.kube
-      if [ -n "$KUBECONFIG_BASE64" ] && [ ${#KUBECONFIG_BASE64} -gt 10 ]; then
-        echo "📝 Создание kubeconfig из переменной KUBECONFIG_BASE64"
-        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config 2>&1
-        if [ $? -eq 0 ]; then
-          chmod 600 ~/.kube/config
-          echo "✅ Kubeconfig создан из KUBECONFIG_BASE64"
-          
-          # Проверка наличия exec-плагина в kubeconfig
-          if grep -q "exec:" ~/.kube/config; then
-            echo "⚠️  Обнаружен exec-плагин в kubeconfig"
-            echo "📝 Устанавливаю yc CLI для работы с exec-плагином..."
-            
-            # Устанавливаем yc CLI
-            apk add --no-cache curl unzip
-            YC_VERSION=$(curl -s https://api.github.com/repos/yandex-cloud/yandex-cloud-cli/releases/latest | grep tag_name | cut -d '"' -f 4 || echo "latest")
-            curl -sSL "https://storage.yandexcloud.net/yandexcloud-yc/install.sh" | bash -s -- -a
-            export PATH=$PATH:$HOME/yandex-cloud/bin
-            
-            # Проверяем установку
-            if command -v yc &> /dev/null; then
-              echo "✅ yc CLI установлен: $(yc version)"
-            else
-              echo "❌ Не удалось установить yc CLI"
-              echo "📝 Альтернатива: получите kubeconfig с статическим токеном:"
-              echo "   yc managed-kubernetes cluster get-credentials --id <cluster-id> --external --token <iam-token>"
-              exit 1
-            fi
-          fi
-        else
-          echo "❌ Ошибка декодирования base64"
-          exit 1
-        fi
-      elif [ -n "$KUBECONFIG" ] && [ ${#KUBECONFIG} -gt 10 ]; then
-        echo "📝 Использование переменной KUBECONFIG"
-        echo "$KUBECONFIG" > ~/.kube/config
-        chmod 600 ~/.kube/config
-        echo "✅ Kubeconfig создан из KUBECONFIG"
-      elif [ -n "$KUBECONFIG_CONTENT" ] && [ ${#KUBECONFIG_CONTENT} -gt 10 ]; then
-        echo "📝 Использование переменной KUBECONFIG_CONTENT"
-        echo "$KUBECONFIG_CONTENT" > ~/.kube/config
-        chmod 600 ~/.kube/config
-        echo "✅ Kubeconfig создан из KUBECONFIG_CONTENT"
-      else
-        echo ""
-        echo "❌ ОШИБКА: Переменные окружения для подключения к кластеру не установлены или пустые!"
-        echo ""
-        echo "🔍 ВОЗМОЖНЫЕ ПРИЧИНЫ:"
-        echo ""
-        echo "1. Переменные помечены как 'Protected', а ветка 'argocd' не защищена"
-        echo "   Решение: Снимите галочку 'Protected' с переменных ИЛИ защитите ветку argocd"
-        echo ""
-        echo "2. Переменные пустые или содержат только пробелы"
-        echo "   Решение: Проверьте значение переменных в Settings → CI/CD → Variables"
-        echo ""
-        echo "3. Переменные не доступны для этой ветки"
-        echo "   Решение: Убедитесь, что в 'Environments' выбрано 'All (default)'"
-        echo ""
-        echo "📝 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:"
-        echo ""
-        echo "1. Перейдите в GitLab: Settings → CI/CD → Variables"
-        echo "2. Найдите переменную KUBECONFIG_BASE64 или KUBECONFIG_CONTENT"
-        echo "3. Убедитесь, что:"
-        echo "   - Значение не пустое"
-        echo "   - 'Protected' снята (или ветка argocd защищена)"
-        echo "   - 'Environments' = 'All (default)'"
-        echo ""
-        echo "4. Если переменная пустая, обновите её:"
-        echo "   $ yc managed-kubernetes cluster get-credentials --id <cluster-id> --external"
-        echo "   $ cat ~/.kube/config | base64 -w 0"
-        echo ""
-        echo "📚 Подробная документация: см. файл GITLAB_CI_SETUP.md"
-        echo ""
-        exit 1
-      fi
-    - echo "✅ Kubeconfig файл создан"
-    - kubectl version --client
   script:
-    - echo "🔍 Проверка подключения к кластеру..."
-    - kubectl cluster-info --request-timeout=30s
-    - echo ""
-    - echo "📋 Получение списка узлов..."
-    - kubectl get nodes
-    - echo ""
-    - echo "📊 Получение информации о кластере..."
-    - kubectl get namespaces
-    - echo ""
-    - echo "✅ Тест подключения пройден успешно!"
+    # 1. Создаем файл из переменной
+    - echo "=== СОЗДАНИЕ KUBECONFIG ==="
+    - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
+    
+    # 2. Проверяем файл
+    - echo "Размер файла: $(wc -c < /tmp/kubeconfig.yaml) байт"
+    - echo "Первые 3 строки:"
+    - head -3 /tmp/kubeconfig.yaml
+    
+    # 3. Тестируем подключение
+    - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
+    
+    # 4. Получаем информацию о кластере
+    - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
+    
+    # 5. Очистка
+    - rm -f /tmp/kubeconfig.yaml
+    - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
