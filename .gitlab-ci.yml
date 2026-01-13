@@ -46,5 +46,6 @@ deploy:
   image: python:3.11-alpine
   script:
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
+    - pip3 install pyyaml
     - python3 test2.py
     - echo "Тесты прошли"
