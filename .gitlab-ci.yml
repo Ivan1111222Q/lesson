@@ -20,7 +20,7 @@ claster-connection:
     - kubectl config use-context yc-lesson
     - kubectl config get-contexts
     
-    - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
+    - echo "✅ ТЕСТ ПРОЙДЕН УСПШНО!"
 
 deplou-docker:
   stage: build
