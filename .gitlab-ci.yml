@@ -24,9 +24,17 @@ claster-connection:
 deploy-helm:
   stage: build
   script:
-    - echo "🚀 УСТАНОВКА HELM"
-    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-    - helm version
+    - echo "🚀 УСТАНОВКА HELM БЕЗ SUDO"
+    
+    # Устанавливаем Helm без sudo
+    - mkdir -p ~/.local/bin
+    - curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+    - chmod 700 get_helm.sh
+    - ./get_helm.sh --no-sudo
+    
+    # Добавляем в PATH
+    - export PATH="$HOME/.local/bin:$PATH"
+    - echo "PATH добавлен: $PATH"
 
 deploy:
   stage: build
