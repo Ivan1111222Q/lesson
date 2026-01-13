@@ -4,35 +4,21 @@ stages:
 
 claster-connection:
   stage: test
-  image: alpine:latest
-  before_script:
-    - echo "🔧 Установка kubectl..."
-    - apk add --no-cache curl
-    - |
-      KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
-      curl -LO "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-      chmod +x kubectl
-      mv kubectl /usr/local/bin/kubectl
-    - echo "✅ kubectl установлен"
-    - kubectl version --client
+  # Используем образ с kubectl уже установленным (но не как entrypoint)
+  image: alpine/k8s:1.29.0
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
-    
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
-    
     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
-
     - echo "=== КОНТЕКСТЫ KUBERNETES ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
     - |
-      # Используем текущий контекст (уже выбран gitlab-context)
       CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
       echo "✅ Текущий контекст: $CURRENT_CONTEXT"
-    
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
 deploy-docker:
@@ -46,7 +32,8 @@ deploy-docker:
 
 deploy-helm:
   stage: build
-  image: alpine:latest
+  # Используем образ с helm уже установленным
+  image: alpine/helm:3.13.0
   script:
     - echo "🚀 ПРОВЕРКА HELM"
     - helm version
