@@ -55,7 +55,7 @@ test-connection:
         echo "   - Protected: ✅"
         echo "   - Masked: ❌"
         echo ""
-        echo "   Вариант C (для обратной совместимости):"
+        echo "   Вариант C (для обратной свместимости):"
         echo "   - Key: KUBECONFIG_CONTENT"
         echo "   - Value: содержимое вашего kubeconfig файла"
         echo ""
