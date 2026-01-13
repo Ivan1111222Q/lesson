@@ -38,54 +38,43 @@ test-connection:
           # Проверка наличия exec-плагина в kubeconfig
           if grep -q "exec:" ~/.kube/config; then
             echo "⚠️  Обнаружен exec-плагин в kubeconfig"
-            echo "📝 Удаляю exec-плагин и использую статический токен..."
-            echo "   Если токена нет в kubeconfig, получите новый:"
+            echo "📝 Пытаюсь удалить exec-плагин..."
+            echo "   ⚠️  ВАЖНО: Для CI/CD рекомендуется использовать kubeconfig с токеном:"
             echo "   yc managed-kubernetes cluster get-credentials --id <cluster-id> --external --token <iam-token>"
             
-            # Используем Python для удаления exec-плагина (Python обычно доступен в образах)
-            python3 << 'PYTHON_SCRIPT'
+            # Пытаемся использовать Python для удаления exec-плагина
+            if command -v python3 &> /dev/null; then
+              python3 -c "
 import yaml
 import sys
 import os
-
 try:
     config_path = os.path.expanduser('~/.kube/config')
     with open(config_path, 'r') as f:
         config = yaml.safe_load(f)
-    
-    # Удаляем exec из всех users
     modified = False
     if 'users' in config:
         for user in config['users']:
             if 'user' in user and 'exec' in user['user']:
-                # Сохраняем токен, если он есть
                 token = user['user'].get('token')
-                # Удаляем exec
                 user['user'] = {k: v for k, v in user['user'].items() if k != 'exec'}
-                # Если был токен, оставляем его
                 if token:
                     user['user']['token'] = token
                 modified = True
-                print(f"   ✅ Удален exec-плагин из user: {user.get('name', 'unknown')}")
-    
     if modified:
         with open(config_path, 'w') as f:
             yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
-        print("   ✅ Kubeconfig обновлен (exec-плагин удален)")
+        print('✅ Exec-плагин удален из kubeconfig')
     else:
-        print("   ℹ️  Exec-плагин не найден в структуре")
-        
-except ImportError:
-    print("   ❌ Python yaml модуль не найден, пытаюсь использовать sed...")
-    # Fallback: используем sed для простого удаления exec секции
-    os.system("sed -i '/^[[:space:]]*exec:/,/^[[:space:]]*[^[:space:]:]/d' ~/.kube/config 2>/dev/null || true")
-    print("   ⚠️  Использован fallback метод (sed)")
+        print('⚠️  Не удалось обработать kubeconfig')
 except Exception as e:
-    print(f"   ❌ Ошибка обработки kubeconfig: {e}", file=sys.stderr)
-    print("   ⚠️  Продолжаю с текущим kubeconfig...")
-PYTHON_SCRIPT
-            
-            echo "✅ Обработка kubeconfig завершена"
+    print(f'⚠️  Ошибка: {e}')
+    sys.exit(0)
+" || echo "⚠️  Python обработка не удалась, продолжаю..."
+            else
+              echo "⚠️  Python не найден, exec-плагин останется в kubeconfig"
+              echo "   Это может вызвать ошибки подключения в CI/CD"
+            fi
           fi
         else
           echo "❌ Ошибка декодирования base64"
