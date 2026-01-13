@@ -12,7 +12,7 @@ test-connection:
   image: bitnami/kubectl:latest
   before_script:
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
-    - echo "🔧 Настройка kubeconfig..."
+    - echo "🔧 Настройк kubeconfig..."
     - |
       # Создание kubeconfig из переменной окружения
       mkdir -p ~/.kube
