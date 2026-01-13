@@ -35,12 +35,17 @@ claster-connection:
     
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
-deplou-docker:
+deploy-docker:
   stage: build
   image: docker:20.10.17
+  services:
+    - docker:20.10.17-dind
+  variables:
+    DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - echo "🚀 УСТАНОВКА DOCKER"
-    - docker version
+    - echo "🚀 ПРОВЕРКА DOCKER"
+    - docker --version
+    - docker info
     - echo "✅ Docker готов к использованию"
 
 deploy-helm:
