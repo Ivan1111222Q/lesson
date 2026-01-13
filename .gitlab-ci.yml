@@ -21,7 +21,7 @@ claster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
     
     # 5. Очистка
-    - rm -f /tmp/kubeconfig.yaml
+    # - rm -f /tmp/kubeconfig.yaml
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
 deploy:
