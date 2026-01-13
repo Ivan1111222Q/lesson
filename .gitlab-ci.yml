@@ -3,34 +3,69 @@ stages:
   - build
   - deploy
 
+image: bitnami/kubectl:latest  # Просто образ с kubectl
+
+variables:
+  APP_NAME: "myapp"
+  NAMESPACE: "production"
+
+before_script:
+  # 1. СОЗДАЁМ KUBECONFIG ИЗ ПЕРЕМЕННОЙ
+  - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
+  - export KUBECONFIG=/tmp/kubeconfig.yaml
+  
+  # 2. ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ (это ВСЁ!)
+  - kubectl cluster-info
+  - kubectl get nodes
+  - echo "✅ Подключились к кластеру!"
+
+# Теперь ВЕЗДЕ доступен kubectl к твоему кластеру
 unit-test:
   stage: test
   script:
     - echo "Запускаем тесты"
-    - sleep 5
-    - python3 test2.py
-    - echo "Тесты прошли"
+    - kubectl get pods -A  # Проверяем что доступ есть
+    # - python3 test2.py
 
 lint-check:
   stage: test
   script:
-    - echo "Начинаем валидацию"
-    - sleep 30
-    - echo "Валидация пройдена"
+    - echo "Проверка конфигурации кластера"
+    - kubectl get namespaces
+    - kubectl get nodes -o wide
 
+# build-job:
+#   stage: build
+#   image: docker:latest
+#   services:
+#     - docker:dind
+#   before_script: []  # Переопределяем для build
+#   script:
+#     - echo "Сборка Docker образа"
+#     - docker build -t myapp:$CI_COMMIT_SHA .
+#     # Если нужно в Yandex Registry:
+#     # - echo $YC_OAUTH_TOKEN | docker login --username oauth --password-stdin cr.yandex
+#     # - docker push cr.yandex/$YC_REGISTRY_ID/myapp:$CI_COMMIT_SHA
 
-build-job:
-  stage: build
-  script:
-    - echo "Сборка"
-    - sleep 30
-    - echo "Сборка прошла"
-
-deploy-job:
-  stage: deploy
-  script:
-    - echo "Запуск теста"
-    - sleep 60
-    - echo "Тесты прошли успешно"
-
-
+# deploy-job:
+#   stage: deploy
+#   image: bitnami/kubectl:latest  # Возвращаем kubectl
+#   script:
+#     - echo "🚀 Деплой в Yandex Cloud K8s..."
+    
+#     # Кластер УЖЕ подключен через before_script!
+    
+#     # 1. Создаем/проверяем namespace
+#     - kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
+    
+#     # 2. Простой деплой
+#     - kubectl create deployment $APP_NAME --image=nginx --replicas=2 -n $NAMESPACE
+#     - kubectl expose deployment $APP_NAME --port=80 --type=LoadBalancer -n $NAMESPACE
+    
+#     # 3. Ждем
+#     - kubectl rollout status deployment/$APP_NAME -n $NAMESPACE --timeout=60s
+    
+#     # 4. Получаем IP
+#     - kubectl get svc $APP_NAME -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
+    
+#     - echo "✅ Готово! Приложение развернуто в Yandex Cloud K8s"

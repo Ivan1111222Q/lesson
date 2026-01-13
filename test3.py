@@ -60,6 +60,7 @@ def helm_command(chart_folders):
 
         if folder in apply_result.stdout:
                 print(f"   ✅ Релиз {folder} успешно установлен!")
+                continue
                 
         else:
                 print(f"   ❌ Ошибка при установке {folder}:")
