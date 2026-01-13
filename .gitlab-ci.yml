@@ -33,8 +33,9 @@ deploy-docker:
 deploy-helm:
   stage: build
   # Используем образ с helm уже установленным
-  image: alpine/helm:3.13.0
-  entrypoint: [""]
+  image:
+    name: alpine/helm:3.13.0
+    entrypoint: [""]
   script:
     - echo "🚀 ПРОВЕРКА HELM"
     - helm version
