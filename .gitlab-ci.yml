@@ -38,15 +38,11 @@ claster-connection:
 deploy-docker:
   stage: build
   image: docker:20.10.17
-  services:
-    - docker:20.10.17-dind
-  variables:
-    DOCKER_TLS_CERTDIR: "/certs"
   script:
-    - echo "🚀 ПРОВЕРКА DOCKER"
+    - echo "🚀 ПРОВЕРКА DOCKER КЛИЕНТА"
     - docker --version
-    - docker info
-    - echo "✅ Docker готов к использованию"
+    - echo "✅ Docker клиент готов"
+    - echo "ℹ️  Для использования Docker daemon нужен privileged режим в runner'е"
 
 deploy-helm:
   stage: build
