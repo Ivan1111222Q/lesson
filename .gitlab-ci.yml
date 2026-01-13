@@ -4,6 +4,7 @@ stages:
 
 claster-connection:
   stage: test
+  image: bitnami/kubectl:latest
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
@@ -23,10 +24,11 @@ claster-connection:
 
 deploy-helm:
   stage: build
+  image: alpine/helm:3.13.0
   script:
-    - echo "🚀 УСТАНОВКА HELM"
-    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - echo "🚀 ПРОВЕРКА HELM"
     - helm version
+    - echo "✅ Helm готов к использованию"
 
 deploy:
   stage: build
