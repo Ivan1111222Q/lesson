@@ -50,9 +50,11 @@ deploy:
     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl
     - mv kubectl /usr/local/bin/
+    - mkdir -p ~/.kube/
+    - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
   script:
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
     - pip3 install pyyaml
-    - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+    - kubectl cluster-info
     - python3 test2.py
     - echo "Тесты прошли"
