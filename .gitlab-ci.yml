@@ -9,10 +9,6 @@ test-connection:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
     
-    # 2. Проверяем файл
-    - echo "Размер файла: $(wc -c < /tmp/kubeconfig.yaml) байт"
-    - echo "Первые 3 строки:"
-    - head -3 /tmp/kubeconfig.yaml
     
     # 3. Тестируем подключение
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
