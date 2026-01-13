@@ -1,15 +1,48 @@
 stages:
   - test
+  - build
+  - deploy
+
+# =============================================================================
+# TEST STAGE
+# =============================================================================
 
 test-connection:
   stage: test
   image: bitnami/kubectl:latest
-  script:
+  before_script:
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
-    - echo "Создаю kubeconfig файл..."
-    - echo "$KUBECONFIG_CONTENT" > /tmp/config.yaml
-    - echo "Пробую подключиться к кластеру..."
-    - kubectl --kubeconfig=/tmp/config.yaml cluster-info --request-timeout=30s
-    - echo "Получаю список узлов..."
-    - kubectl --kubeconfig=/tmp/config.yaml get nodes
-    - echo "✅ Тест пройден успешно!"
+    - echo "🔧 Настройка kubeconfig..."
+    - |
+      # Создание kubeconfig из переменной окружения
+      mkdir -p ~/.kube
+      if [ -n "$KUBECONFIG_BASE64" ]; then
+        echo "📝 Создание kubeconfig из переменной KUBECONFIG_BASE64"
+        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
+        chmod 600 ~/.kube/config
+      elif [ -n "$KUBECONFIG" ]; then
+        echo "📝 Использование переменной KUBECONFIG"
+        echo "$KUBECONFIG" > ~/.kube/config
+        chmod 600 ~/.kube/config
+      elif [ -n "$KUBECONFIG_CONTENT" ]; then
+        echo "📝 Использование переменной KUBECONFIG_CONTENT"
+        echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+        chmod 600 ~/.kube/config
+      else
+        echo "⚠️  KUBECONFIG, KUBECONFIG_BASE64 или KUBECONFIG_CONTENT не установлен"
+        echo "ℹ️  Установите одну из этих переменных в Settings → CI/CD → Variables"
+        exit 1
+      fi
+    - echo "✅ Kubeconfig файл создан"
+    - kubectl version --client
+  script:
+    - echo "🔍 Проверка подключения к кластеру..."
+    - kubectl cluster-info --request-timeout=30s
+    - echo ""
+    - echo "📋 Получение списка узлов..."
+    - kubectl get nodes
+    - echo ""
+    - echo "📊 Получение информации о кластере..."
+    - kubectl get namespaces
+    - echo ""
+    - echo "✅ Тест подключения пройден успешно!"
