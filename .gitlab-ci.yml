@@ -4,7 +4,7 @@ stages:
 
 claster-connection:
   stage: test
-  image: bitnami/kubectl:latest
+  # image: bitnami/kubectl:latest
   script:
     # 1. Создаем файл из переменной
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
@@ -21,12 +21,12 @@ claster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
     
     # 5. Очистка
-    # - rm -f /tmp/kubeconfig.yaml
+    - rm -f /tmp/kubeconfig.yaml
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
 deploy:
   stage: build
   script:
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
-    - python3 --kubeconfig=/tmp/kubeconfig.yaml test2.py
+    - python3 test2.py
     - echo "Тесты прошли"
