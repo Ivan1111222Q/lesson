@@ -26,9 +26,12 @@ claster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
 
+    - echo "=== КОНТЕКСТЫ KUBERNETES ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config use-context yc-lesson
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
+    - |
+      # Используем текущий контекст (уже выбран gitlab-context)
+      CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
+      echo "✅ Текущий контекст: $CURRENT_CONTEXT"
     
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
