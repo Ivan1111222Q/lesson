@@ -5,27 +5,15 @@ stages:
 claster-connection:
   stage: test
   image: bitnami/kubectl:latest
+  entrypoint: [""]  # Переопределяем entrypoint, чтобы использовать shell
   before_script:
-    - |
-      # Проверяем, установлен ли kubectl
-      if ! command -v kubectl &> /dev/null; then
-        echo "📦 Устанавливаю kubectl..."
-        # Для Alpine
-        if [ -f /etc/alpine-release ]; then
-          apk add --no-cache curl
-          KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
-          curl -LO "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          mv kubectl /usr/local/bin/
-        else
-          # Для других дистрибутивов
-          curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-          chmod +x kubectl
-          sudo mv kubectl /usr/local/bin/ || mv kubectl /usr/local/bin/
-        fi
-      fi
     - echo "🔧 Проверка kubectl..."
-    - kubectl version --client
+    - |
+      # Находим kubectl в образе
+      if [ -f /opt/bitnami/kubectl/bin/kubectl ]; then
+        export PATH="/opt/bitnami/kubectl/bin:$PATH"
+      fi
+      kubectl version --client
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
@@ -37,9 +25,9 @@ claster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
 
-    - kubectl config get-contexts
-    - kubectl config use-context yc-lesson
-    - kubectl config get-contexts
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config use-context yc-lesson
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
     
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
