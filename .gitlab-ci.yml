@@ -3,71 +3,57 @@ stages:
   - build
   - deploy
 
-image: bitnami/kubectl:latest  # Просто образ с kubectl
+image: bitnami/kubectl:latest
 
 variables:
   APP_NAME: "myapp"
   NAMESPACE: "production"
 
 before_script:
-  # 1. СОЗДАЁМ KUBECONFIG ИЗ ПЕРЕМЕННОЙ
+  # 0. ОТЛАДКА: Что у нас есть?
+  - echo "=== НАЧАЛО ОТЛАДКИ ==="
+  - echo "Текущая директория: $(pwd)"
+  - echo "KUBECONFIG переменная до: $KUBECONFIG"
+  
+  # 1. Проверяем переменную KUBECONFIG_CONTENT
+  - echo "=== ПРОВЕРКА KUBECONFIG_CONTENT ==="
+  - echo "Длина переменной: ${#KUBECONFIG_CONTENT} символов"
+  
+  # Показываем первые 200 символов (безопасно)
+  - echo "Первые 200 символов KUBECONFIG_CONTENT:"
+  - echo "${KUBECONFIG_CONTENT:0:200}"
+  
+  # 2. Сохраняем во временный файл
+  - echo "=== СОЗДАНИЕ KUBECONFIG ФАЙЛА ==="
   - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
+  
+  # 3. Проверяем что файл создан
+  - echo "Содержимое /tmp/kubeconfig.yaml (первые 10 строк):"
+  - head -10 /tmp/kubeconfig.yaml
+  
+  # 4. Устанавливаем KUBECONFIG
   - export KUBECONFIG=/tmp/kubeconfig.yaml
-  - cat ~/.kube/config
+  - echo "KUBECONFIG установлен в: $KUBECONFIG"
   
+  # 5. Проверяем домашнюю директорию (пусто!)
+  - echo "=== ПРОВЕРКА ~/.kube/config ==="
+  - ls -la ~/.kube/ 2>/dev/null || echo "Директория ~/.kube/ не существует"
+  - cat ~/.kube/config 2>/dev/null || echo "Файл ~/.kube/config не существует"
   
-  # # 2. ПРОВЕРЯЕМ ПОДКЛЮЧЕНИЕ (это ВСЁ!)
-  # - kubectl cluster-info
-  # - kubectl get nodes
-  # - echo "✅ Подключились к кластеру!"
+  # 6. Проверяем что kubectl видит наш конфиг
+  - echo "=== ЧТО ВИДИТ KUBECTL? ==="
+  - kubectl config view --minify
+  
+  # 7. Пробуем подключиться (с таймаутом)
+  - echo "=== ПРОБУЕМ ПОДКЛЮЧИТЬСЯ ==="
+  - timeout 10 kubectl cluster-info 2>&1 || echo "⚠️ Таймаут подключения"
+  - echo "=== ОТЛАДКА ЗАВЕРШЕНА ==="
 
-# # Теперь ВЕЗДЕ доступен kubectl к твоему кластеру
-# unit-test:
-#   stage: test
-#   script:
-#     - echo "Запускаем тесты"
-#     - kubectl get pods -A  # Проверяем что доступ есть
-#     # - python3 test2.py
-
-# lint-check:
-#   stage: test
-#   script:
-#     - echo "Проверка конфигурации кластера"
-#     - kubectl get namespaces
-#     - kubectl get nodes -o wide
-
-# build-job:
-#   stage: build
-#   image: docker:latest
-#   services:
-#     - docker:dind
-#   before_script: []  # Переопределяем для build
-#   script:
-#     - echo "Сборка Docker образа"
-#     - docker build -t myapp:$CI_COMMIT_SHA .
-#     # Если нужно в Yandex Registry:
-#     # - echo $YC_OAUTH_TOKEN | docker login --username oauth --password-stdin cr.yandex
-#     # - docker push cr.yandex/$YC_REGISTRY_ID/myapp:$CI_COMMIT_SHA
-
-# deploy-job:
-#   stage: deploy
-#   image: bitnami/kubectl:latest  # Возвращаем kubectl
-#   script:
-#     - echo "🚀 Деплой в Yandex Cloud K8s..."
-    
-#     # Кластер УЖЕ подключен через before_script!
-    
-#     # 1. Создаем/проверяем namespace
-#     - kubectl create namespace $NAMESPACE --dry-run=client -o yaml | kubectl apply -f -
-    
-#     # 2. Простой деплой
-#     - kubectl create deployment $APP_NAME --image=nginx --replicas=2 -n $NAMESPACE
-#     - kubectl expose deployment $APP_NAME --port=80 --type=LoadBalancer -n $NAMESPACE
-    
-#     # 3. Ждем
-#     - kubectl rollout status deployment/$APP_NAME -n $NAMESPACE --timeout=60s
-    
-#     # 4. Получаем IP
-#     - kubectl get svc $APP_NAME -n $NAMESPACE -o jsonpath='{.status.loadBalancer.ingress[0].ip}'
-    
-#     - echo "✅ Готово! Приложение развернуто в Yandex Cloud K8s"
+# Тестовая job
+unit-test:
+  stage: test
+  script:
+    - echo "=== START unit-test ==="
+    # ЯВНО указываем путь к конфигу
+    - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes 2>&1 || echo "❌ Ошибка"
+    - echo "=== END unit-test ==="
