@@ -19,9 +19,14 @@ claster-connection:
     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
+
+    # 5. Переключение на другой кластер
+    - kubectl config use-context yc-lesson
+    - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
+    - kubectl get nodes
     
     # 5. Очистка
-    - rm -f /tmp/kubeconfig.yaml
+    # - rm -f /tmp/kubeconfig.yaml
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
 deploy:
