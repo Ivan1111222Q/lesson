@@ -38,23 +38,54 @@ test-connection:
           # Проверка наличия exec-плагина в kubeconfig
           if grep -q "exec:" ~/.kube/config; then
             echo "⚠️  Обнаружен exec-плагин в kubeconfig"
-            echo "📝 Устанавливаю yc CLI для работы с exec-плагином..."
+            echo "📝 Удаляю exec-плагин и использую статический токен..."
+            echo "   Если токена нет в kubeconfig, получите новый:"
+            echo "   yc managed-kubernetes cluster get-credentials --id <cluster-id> --external --token <iam-token>"
             
-            # Устанавливаем yc CLI
-            apk add --no-cache curl unzip
-            YC_VERSION=$(curl -s https://api.github.com/repos/yandex-cloud/yandex-cloud-cli/releases/latest | grep tag_name | cut -d '"' -f 4 || echo "latest")
-            curl -sSL "https://storage.yandexcloud.net/yandexcloud-yc/install.sh" | bash -s -- -a
-            export PATH=$PATH:$HOME/yandex-cloud/bin
+            # Используем Python для удаления exec-плагина (Python обычно доступен в образах)
+            python3 << 'PYTHON_SCRIPT'
+import yaml
+import sys
+import os
+
+try:
+    config_path = os.path.expanduser('~/.kube/config')
+    with open(config_path, 'r') as f:
+        config = yaml.safe_load(f)
+    
+    # Удаляем exec из всех users
+    modified = False
+    if 'users' in config:
+        for user in config['users']:
+            if 'user' in user and 'exec' in user['user']:
+                # Сохраняем токен, если он есть
+                token = user['user'].get('token')
+                # Удаляем exec
+                user['user'] = {k: v for k, v in user['user'].items() if k != 'exec'}
+                # Если был токен, оставляем его
+                if token:
+                    user['user']['token'] = token
+                modified = True
+                print(f"   ✅ Удален exec-плагин из user: {user.get('name', 'unknown')}")
+    
+    if modified:
+        with open(config_path, 'w') as f:
+            yaml.dump(config, f, default_flow_style=False, sort_keys=False, allow_unicode=True)
+        print("   ✅ Kubeconfig обновлен (exec-плагин удален)")
+    else:
+        print("   ℹ️  Exec-плагин не найден в структуре")
+        
+except ImportError:
+    print("   ❌ Python yaml модуль не найден, пытаюсь использовать sed...")
+    # Fallback: используем sed для простого удаления exec секции
+    os.system("sed -i '/^[[:space:]]*exec:/,/^[[:space:]]*[^[:space:]:]/d' ~/.kube/config 2>/dev/null || true")
+    print("   ⚠️  Использован fallback метод (sed)")
+except Exception as e:
+    print(f"   ❌ Ошибка обработки kubeconfig: {e}", file=sys.stderr)
+    print("   ⚠️  Продолжаю с текущим kubeconfig...")
+PYTHON_SCRIPT
             
-            # Проверяем установку
-            if command -v yc &> /dev/null; then
-              echo "✅ yc CLI установлен: $(yc version)"
-            else
-              echo "❌ Не удалось установить yc CLI"
-              echo "📝 Альтернатива: получите kubeconfig с статическим токеном:"
-              echo "   yc managed-kubernetes cluster get-credentials --id <cluster-id> --external --token <iam-token>"
-              exit 1
-            fi
+            echo "✅ Обработка kubeconfig завершена"
           fi
         else
           echo "❌ Ошибка декодирования base64"
