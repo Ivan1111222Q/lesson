@@ -22,6 +22,14 @@ claster-connection:
     
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
+deplou-docker:
+  stage: build
+  image: docker:20.10.17
+  script:
+    - echo "🚀 УСТАНОВКА DOCKER"
+    - docker version
+    - echo "✅ Docker готов к использованию"
+
 deploy-helm:
   stage: build
   image: alpine/helm:3.13.0
