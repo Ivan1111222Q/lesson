@@ -43,6 +43,7 @@ deploy-helm:
 
 deploy:
   stage: build
+  image: python:3.11-alpine
   script:
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
     - python3 test2.py
