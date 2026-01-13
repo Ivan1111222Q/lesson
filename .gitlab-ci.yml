@@ -12,52 +12,66 @@ test-connection:
   image: bitnami/kubectl:latest
   before_script:
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
-    - echo "🔧 Настройк kubeconfig..."
+    - echo "🔧 Настройка kubeconfig..."
     - |
+      # Отладочная информация
+      echo "🔍 Отладка переменных окружения:"
+      echo "   KUBECONFIG_BASE64 установлена: $([ -n "$KUBECONFIG_BASE64" ] && echo 'ДА' || echo 'НЕТ')"
+      echo "   KUBECONFIG установлена: $([ -n "$KUBECONFIG" ] && echo 'ДА' || echo 'НЕТ')"
+      echo "   KUBECONFIG_CONTENT установлена: $([ -n "$KUBECONFIG_CONTENT" ] && echo 'ДА' || echo 'НЕТ')"
+      echo "   Длина KUBECONFIG_BASE64: ${#KUBECONFIG_BASE64}"
+      echo "   Длина KUBECONFIG_CONTENT: ${#KUBECONFIG_CONTENT}"
+      echo ""
+      
       # Создание kubeconfig из переменной окружения
       mkdir -p ~/.kube
-      if [ -n "$KUBECONFIG_BASE64" ]; then
+      if [ -n "$KUBECONFIG_BASE64" ] && [ ${#KUBECONFIG_BASE64} -gt 10 ]; then
         echo "📝 Создание kubeconfig из переменной KUBECONFIG_BASE64"
-        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config
-        chmod 600 ~/.kube/config
-      elif [ -n "$KUBECONFIG" ]; then
+        echo "$KUBECONFIG_BASE64" | base64 -d > ~/.kube/config 2>&1
+        if [ $? -eq 0 ]; then
+          chmod 600 ~/.kube/config
+          echo "✅ Kubeconfig создан из KUBECONFIG_BASE64"
+        else
+          echo "❌ Ошибка декодирования base64"
+          exit 1
+        fi
+      elif [ -n "$KUBECONFIG" ] && [ ${#KUBECONFIG} -gt 10 ]; then
         echo "📝 Использование переменной KUBECONFIG"
         echo "$KUBECONFIG" > ~/.kube/config
         chmod 600 ~/.kube/config
-      elif [ -n "$KUBECONFIG_CONTENT" ]; then
+        echo "✅ Kubeconfig создан из KUBECONFIG"
+      elif [ -n "$KUBECONFIG_CONTENT" ] && [ ${#KUBECONFIG_CONTENT} -gt 10 ]; then
         echo "📝 Использование переменной KUBECONFIG_CONTENT"
         echo "$KUBECONFIG_CONTENT" > ~/.kube/config
         chmod 600 ~/.kube/config
+        echo "✅ Kubeconfig создан из KUBECONFIG_CONTENT"
       else
         echo ""
-        echo "❌ ОШИБКА: Переменные окружения для подключения к кластеру не установлены!"
+        echo "❌ ОШИБКА: Переменные окружения для подключения к кластеру не установлены или пустые!"
+        echo ""
+        echo "🔍 ВОЗМОЖНЫЕ ПРИЧИНЫ:"
+        echo ""
+        echo "1. Переменные помечены как 'Protected', а ветка 'argocd' не защищена"
+        echo "   Решение: Снимите галочку 'Protected' с переменных ИЛИ защитите ветку argocd"
+        echo ""
+        echo "2. Переменные пустые или содержат только пробелы"
+        echo "   Решение: Проверьте значение переменных в Settings → CI/CD → Variables"
+        echo ""
+        echo "3. Переменные не доступны для этой ветки"
+        echo "   Решение: Убедитесь, что в 'Environments' выбрано 'All (default)'"
         echo ""
         echo "📝 ИНСТРУКЦИЯ ПО НАСТРОЙКЕ:"
         echo ""
         echo "1. Перейдите в GitLab: Settings → CI/CD → Variables"
-        echo "2. Добавьте одну из следующих переменных:"
+        echo "2. Найдите переменную KUBECONFIG_BASE64 или KUBECONFIG_CONTENT"
+        echo "3. Убедитесь, что:"
+        echo "   - Значение не пустое"
+        echo "   - 'Protected' снята (или ветка argocd защищена)"
+        echo "   - 'Environments' = 'All (default)'"
         echo ""
-        echo "   Вариант A (рекомендуется):"
-        echo "   - Key: KUBECONFIG_BASE64"
-        echo "   - Value: ваш kubeconfig, закодированный в base64"
-        echo "   - Type: Variable"
-        echo "   - Protected: ✅"
-        echo "   - Masked: ❌"
-        echo ""
-        echo "   Как получить:"
+        echo "4. Если переменная пустая, обновите её:"
         echo "   $ yc managed-kubernetes cluster get-credentials --id <cluster-id> --external"
         echo "   $ cat ~/.kube/config | base64 -w 0"
-        echo ""
-        echo "   Вариант B:"
-        echo "   - Key: KUBECONFIG"
-        echo "   - Value: содержимое вашего kubeconfig файла"
-        echo "   - Type: Variable"
-        echo "   - Protected: ✅"
-        echo "   - Masked: ❌"
-        echo ""
-        echo "   Вариант C (для обратной свместимости):"
-        echo "   - Key: KUBECONFIG_CONTENT"
-        echo "   - Value: содержимое вашего kubeconfig файла"
         echo ""
         echo "📚 Подробная документация: см. файл GITLAB_CI_SETUP.md"
         echo ""
