@@ -46,7 +46,7 @@ deploy-docker:
 
 deploy-helm:
   stage: build
-  image: alpine/helm:3.13.0
+  image: alpine:latest
   script:
     - echo "🚀 ПРОВЕРКА HELM"
     - helm version
