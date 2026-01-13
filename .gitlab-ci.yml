@@ -4,6 +4,17 @@ stages:
 
 claster-connection:
   stage: test
+  image: alpine:latest
+  before_script:
+    - echo "🔧 Установка kubectl..."
+    - apk add --no-cache curl
+    - |
+      KUBECTL_VERSION=$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)
+      curl -LO "https://storage.googleapis.com/kubernetes-release/release/${KUBECTL_VERSION}/bin/linux/amd64/kubectl"
+      chmod +x kubectl
+      mv kubectl /usr/local/bin/kubectl
+    - echo "✅ kubectl установлен"
+    - kubectl version --client
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
