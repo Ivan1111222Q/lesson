@@ -34,7 +34,6 @@ deploy-helm:
     
     # Добавляем в PATH
     - export PATH="$HOME/.local/bin:$PATH"
-    - echo "PATH добавлен: $PATH"
 
 deploy:
   stage: build
