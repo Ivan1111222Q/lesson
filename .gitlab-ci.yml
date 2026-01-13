@@ -4,7 +4,7 @@ stages:
 
 claster-connection:
   stage: test
-  image: bitnami/kubectl:latest
+  # image: bitnami/kubectl:latest
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
