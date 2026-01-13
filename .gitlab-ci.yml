@@ -10,6 +10,7 @@ claster-connection:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
     
+
     
     # 3. Тестируем подключение
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
@@ -30,6 +31,17 @@ claster-connection:
     # 5. Очистка
     # - rm -f /tmp/kubeconfig.yaml
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
+
+deploy-helm:
+  stage: build
+  script:
+    - echo "🚀 УСТАНОВКА HELM
+    # Установка Helm
+    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+
+    # Проверка
+    - helm version"
+    
 
 deploy:
   stage: build
