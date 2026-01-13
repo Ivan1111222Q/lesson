@@ -21,9 +21,11 @@ claster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
 
     # 5. Переключение на другой кластер
+    - kubectl config get-contexts
     - kubectl config use-context yc-lesson
-    - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
-    - kubectl get nodes
+    - kubectl config get-contexts
+
+    
     
     # 5. Очистка
     # - rm -f /tmp/kubeconfig.yaml
