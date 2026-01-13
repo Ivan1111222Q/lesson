@@ -10,6 +10,9 @@ stages:
 test-connection:
   stage: test
   image: bitnami/kubectl:latest
+  variables:
+    # Используем образ с yc CLI или установим его
+    YC_CLI_VERSION: "latest"
   before_script:
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - echo "🔧 Настройка kubeconfig..."
@@ -31,6 +34,28 @@ test-connection:
         if [ $? -eq 0 ]; then
           chmod 600 ~/.kube/config
           echo "✅ Kubeconfig создан из KUBECONFIG_BASE64"
+          
+          # Проверка наличия exec-плагина в kubeconfig
+          if grep -q "exec:" ~/.kube/config; then
+            echo "⚠️  Обнаружен exec-плагин в kubeconfig"
+            echo "📝 Устанавливаю yc CLI для работы с exec-плагином..."
+            
+            # Устанавливаем yc CLI
+            apk add --no-cache curl unzip
+            YC_VERSION=$(curl -s https://api.github.com/repos/yandex-cloud/yandex-cloud-cli/releases/latest | grep tag_name | cut -d '"' -f 4 || echo "latest")
+            curl -sSL "https://storage.yandexcloud.net/yandexcloud-yc/install.sh" | bash -s -- -a
+            export PATH=$PATH:$HOME/yandex-cloud/bin
+            
+            # Проверяем установку
+            if command -v yc &> /dev/null; then
+              echo "✅ yc CLI установлен: $(yc version)"
+            else
+              echo "❌ Не удалось установить yc CLI"
+              echo "📝 Альтернатива: получите kubeconfig с статическим токеном:"
+              echo "   yc managed-kubernetes cluster get-credentials --id <cluster-id> --external --token <iam-token>"
+              exit 1
+            fi
+          fi
         else
           echo "❌ Ошибка декодирования base64"
           exit 1
