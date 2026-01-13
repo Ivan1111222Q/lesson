@@ -5,23 +5,12 @@ test-connection:
   stage: test
   image: bitnami/kubectl:latest
   script:
-    # 1. Создаем kubeconfig
-    - echo "Создаю kubeconfig из переменной..."
-    - echo "$KUBECONFIG_CONTENT" > /tmp/config
-    
-    # 2. Проверяем
-    - echo "Проверяю файл..."
-    - ls -la /tmp/config
-    - echo "Строк в файле: $(wc -l < /tmp/config)"
-    
-    # 3. Подключаемся
-    - echo "Пробую подключиться..."
-    - KUBECONFIG=/tmp/config kubectl cluster-info --request-timeout=30s
-    
-    # 4. Получаем nodes
+    - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
+    - echo "Создаю kubeconfig файл..."
+    - echo "$KUBECONFIG_CONTENT" > /tmp/config.yaml
+    - echo "Файл создан. Размер: $(wc -c < /tmp/config.yaml) байт"
+    - echo "Пробую подключиться к кластеру..."
+    - kubectl --kubeconfig=/tmp/config.yaml cluster-info --request-timeout=30s
     - echo "Получаю список узлов..."
-    - KUBECONFIG=/tmp/config kubectl get nodes
-    
-    # 5. Очистка
-    - rm -f /tmp/config
-    - echo "✅ Тест завершен!"
+    - kubectl --kubeconfig=/tmp/config.yaml get nodes
+    - echo "✅ Тест пройден успешно!"
