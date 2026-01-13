@@ -40,8 +40,8 @@ deploy-helm:
     - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
 
     # Проверка
-    - helm version"
-    
+    - helm version
+
 
 deploy:
   stage: build
