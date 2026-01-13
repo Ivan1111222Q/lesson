@@ -4,44 +4,29 @@ stages:
 
 claster-connection:
   stage: test
-  # image: bitnami/kubectl:latest
   script:
-    # 1. Создаем файл из переменной
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
     
-
-    
-    # 3. Тестируем подключение
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
     
-    # 4. Получаем информацию о кластере
     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
 
-    # 5. Переключение на другой кластер
     - kubectl config get-contexts
     - kubectl config use-context yc-lesson
     - kubectl config get-contexts
-
     
-    
-    # 5. Очистка
-    # - rm -f /tmp/kubeconfig.yaml
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
 
 deploy-helm:
   stage: build
   script:
-    - echo "🚀 УСТАНОВКА HELM
-    # Установка Helm
+    - echo "🚀 УСТАНОВКА HELM"
     - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
-
-    # Проверка
     - helm version
-
 
 deploy:
   stage: build
