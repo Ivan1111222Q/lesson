@@ -6,7 +6,7 @@ claster-connection:
   stage: test
   # Используем образ с kubectl уже установленным (но не как entrypoint)
   # image: alpine/k8s:1.29.0
-  tags: ["shell"]
+  # tags: ["shell"]
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
