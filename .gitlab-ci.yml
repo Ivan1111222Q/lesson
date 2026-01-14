@@ -4,11 +4,14 @@ stages:
 
 cluster-connection:
   stage: test
-  image: alpine/k8s:1.29.0
+  image: alpine:latest
   tags: ["docker"]
-  entrypoint: [""]
   before_script:
-    - apk add --no-cache bash || true
+    - apk add --no-cache curl bash
+    - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+    - chmod +x kubectl
+    - mv kubectl /usr/local/bin/kubectl
+    - kubectl version --client
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - mkdir -p /tmp
