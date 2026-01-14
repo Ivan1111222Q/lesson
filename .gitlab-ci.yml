@@ -58,11 +58,14 @@ deploy:
   image: python:3.11-alpine
   tags: ["docker"]
   before_script:
-    - apk add --no-cache curl
+    - apk add --no-cache curl tar
     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl
     - mv kubectl /usr/local/bin/
-    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - curl -LO "https://get.helm.sh/helm-v3.13.0-linux-amd64.tar.gz"
+    - tar -zxvf helm-v3.13.0-linux-amd64.tar.gz
+    - mv linux-amd64/helm /usr/local/bin/helm
+    - rm -rf linux-amd64 helm-v3.13.0-linux-amd64.tar.gz
     - helm version
     - mkdir -p ~/.kube/
     - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
