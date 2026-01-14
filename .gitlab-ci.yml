@@ -11,7 +11,8 @@ variables:
 build:
   stage: build
   image: docker:24.0
-  services: docker:24.0-dind
+  services:
+    - docker:24.0-dind
   script:
    - docker pull alpine:latest 
    - docker tag alpine:latest $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
