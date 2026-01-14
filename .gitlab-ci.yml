@@ -10,8 +10,6 @@ cluster-connection:
     - source ~/.profile || true
     - which kubectl || (echo "kubectl not found" && exit 1)
     - kubectl version --client || (echo "kubectl not working" && exit 1)
-    - echo "kubectl found: $(which kubectl)"
-    - echo "kubectl version: $(kubectl version --client --short)"
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - mkdir -p /tmp
