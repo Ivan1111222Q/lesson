@@ -2,36 +2,56 @@ stages:
   - test
   - build
 
-cluster-connection:
-  stage: test
-  image: alpine:latest
-  tags: ["docker"]
-  before_script:
-    - apk add --no-cache curl bash
-    - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
-    - chmod +x kubectl
-    - mv kubectl /usr/local/bin/kubectl
-    - kubectl version --client
+variables:
+  REGISTRY: cr.yandex
+  REGISTRY_ID: crpiqtsurn6alildl4cb
+  DOCKER_HOST: tcp://docker:2375
+  DOCKER_TLS_CERTDIR: ""
+
+build:
+  stage: build
+  image: docker:24.0
+  services: docker:24.0-dind
   script:
-    - echo "=== СОЗДАНИЕ KUBECONFIG ==="
-    - mkdir -p /tmp
-    - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
-    - chmod 600 /tmp/kubeconfig.yaml
-    - echo "=== ПРОВЕРКА KUBECTL ==="
-    - kubectl version --client
-    - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
-    - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
-    - echo "=== КОНТЕКСТЫ KUBERNETES ==="
-    - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
-    - |
-      CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
-      echo "Текущий контекст: $CURRENT_CONTEXT"
-    - echo "ТЕСТ ПРОЙДЕН УСПЕШНО!"
-  after_script:
-    - rm -f /tmp/kubeconfig.yaml || true
+   - docker pull alpine:latest 
+   - docker tag alpine:latest $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
+   - docker push $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
+
+
+
+
+
+
+# cluster-connection:
+#   stage: test
+#   image: alpine:latest
+#   tags: ["docker"]
+#   before_script:
+#     - apk add --no-cache curl bash
+#     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+#     - chmod +x kubectl
+#     - mv kubectl /usr/local/bin/kubectl
+#     - kubectl version --client
+#   script:
+#     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
+#     - mkdir -p /tmp
+#     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
+#     - chmod 600 /tmp/kubeconfig.yaml
+#     - echo "=== ПРОВЕРКА KUBECTL ==="
+#     - kubectl version --client
+#     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
+#     - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
+#     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
+#     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get nodes
+#     - kubectl --kubeconfig=/tmp/kubeconfig.yaml get namespaces
+#     - echo "=== КОНТЕКСТЫ KUBERNETES ==="
+#     - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
+#     - |
+#       CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
+#       echo "Текущий контекст: $CURRENT_CONTEXT"
+#     - echo "ТЕСТ ПРОЙДЕН УСПЕШНО!"
+#   after_script:
+#     - rm -f /tmp/kubeconfig.yaml || true
 
 # deploy-docker:
 #   stage: build
@@ -53,24 +73,24 @@ cluster-connection:
 #     - helm version
 #     - echo "✅ Helm готов к использованию"
 
-deploy:
-  stage: build
-  image: python:3.11-alpine
-  tags: ["docker"]
-  before_script:
-    - apk add --no-cache curl tar
-    - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
-    - chmod +x kubectl
-    - mv kubectl /usr/local/bin/
-    - curl -LO "https://get.helm.sh/helm-v3.13.0-linux-amd64.tar.gz"
-    - tar -zxvf helm-v3.13.0-linux-amd64.tar.gz
-    - mv linux-amd64/helm /usr/local/bin/helm
-    - rm -rf linux-amd64 helm-v3.13.0-linux-amd64.tar.gz
-    - helm version
-    - mkdir -p ~/.kube/
-    - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
-  script:
-    - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
-    - pip3 install pyyaml
-    - python3 test2.py
-    - echo "Тесты прошли"
+# deploy:
+#   stage: build
+#   image: python:3.11-alpine
+#   tags: ["docker"]
+#   before_script:
+#     - apk add --no-cache curl tar
+#     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
+#     - chmod +x kubectl
+#     - mv kubectl /usr/local/bin/
+#     - curl -LO "https://get.helm.sh/helm-v3.13.0-linux-amd64.tar.gz"
+#     - tar -zxvf helm-v3.13.0-linux-amd64.tar.gz
+#     - mv linux-amd64/helm /usr/local/bin/helm
+#     - rm -rf linux-amd64 helm-v3.13.0-linux-amd64.tar.gz
+#     - helm version
+#     - mkdir -p ~/.kube/
+#     - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+#   script:
+#     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
+#     - pip3 install pyyaml
+#     - python3 test2.py
+#     - echo "Тесты прошли"
