@@ -6,20 +6,20 @@ test-shell-runner:
   stage: test
   tags: ["shell"]
   script:
-    - echo "=== ТЕСТ SHELL RUNNER ==="
-    - echo "Пользователь: $(whoami)"
-    - echo "Домашняя директория: $HOME"
-    - echo "Рабочая директория: $(pwd)"
+    - echo "TEST SHELL RUNNER"
+    - echo "User: $(whoami)"
+    - echo "Home: $HOME"
+    - echo "PWD: $(pwd)"
     - echo "PATH: $PATH"
-    - echo "=== ПРОВЕРКА СИСТЕМЫ ==="
+    - echo "SYSTEM CHECK"
     - uname -a
-    - echo "=== ПРОВЕРКА КОМАНД ==="
-    - which bash || echo "bash не найден"
-    - which kubectl || echo "kubectl не найден"
-    - which helm || echo "helm не найден"
-    - echo "=== ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ==="
+    - echo "COMMAND CHECK"
+    - which bash || echo "bash not found"
+    - which kubectl || echo "kubectl not found"
+    - which helm || echo "helm not found"
+    - echo "ENVIRONMENT VARIABLES"
     - env | grep -E "(CI|GITLAB|RUNNER)" | head -10
-    - echo "✅ SHELL RUNNER РАБОТАЕТ!"
+    - echo "SHELL RUNNER WORKS!"
 
 cluster-connection:
   stage: test
