@@ -42,16 +42,16 @@ cluster-connection:
 #     - echo "✅ Docker клиент готов"
 #     - echo "ℹ️  Для использования Docker daemon нужен privileged режим в runner'е"
 
-deploy-helm:
-  stage: build
-  # Используем образ с helm уже установленным
-  image:
-    name: alpine/helm:3.13.0
-    entrypoint: [""]
-  script:
-    - echo "🚀 ПРОВЕРКА HELM"
-    - helm version
-    - echo "✅ Helm готов к использованию"
+# deploy-helm:
+#   stage: build
+#   # Используем образ с helm уже установленным
+#   image:
+#     name: alpine/helm:3.13.0
+#     entrypoint: [""]
+#   script:
+#     - echo "🚀 ПРОВЕРКА HELM"
+#     - helm version
+#     - echo "✅ Helm готов к использованию"
 
 deploy:
   stage: build
@@ -62,6 +62,8 @@ deploy:
     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl
     - mv kubectl /usr/local/bin/
+    - curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+    - helm version
     - mkdir -p ~/.kube/
     - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
   script:
