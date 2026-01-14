@@ -4,17 +4,18 @@ stages:
 
 cluster-connection:
   stage: test
-  tags: ["shell"]
+  image: alpine/k8s:1.29.0
+  tags: ["docker"]
+  entrypoint: [""]
   before_script:
-    - source ~/.bashrc || true
-    - source ~/.profile || true
-    - which kubectl || (echo "kubectl not found" && exit 1)
-    - kubectl version --client || (echo "kubectl not working" && exit 1)
+    - apk add --no-cache bash || true
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - mkdir -p /tmp
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
     - chmod 600 /tmp/kubeconfig.yaml
+    - echo "=== ПРОВЕРКА KUBECTL ==="
+    - kubectl version --client
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
@@ -24,8 +25,8 @@ cluster-connection:
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml config get-contexts
     - |
       CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
-      echo "✅ Текущий контекст: $CURRENT_CONTEXT"
-    - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
+      echo "Текущий контекст: $CURRENT_CONTEXT"
+    - echo "ТЕСТ ПРОЙДЕН УСПЕШНО!"
   after_script:
     - rm -f /tmp/kubeconfig.yaml || true
 
