@@ -6,14 +6,12 @@ cluster-connection:
   stage: test
   tags: ["shell"]
   before_script:
-    # Явная загрузка профиля для shell executor
     - source ~/.bashrc || true
     - source ~/.profile || true
-    # Проверка наличия kubectl
-    - which kubectl || (echo "❌ kubectl не найден в PATH" && exit 1)
-    - kubectl version --client || (echo "❌ kubectl не работает" && exit 1)
-    - echo "✅ kubectl найден: $(which kubectl)"
-    - echo "✅ kubectl версия: $(kubectl version --client --short)"
+    - which kubectl || (echo "kubectl not found" && exit 1)
+    - kubectl version --client || (echo "kubectl not working" && exit 1)
+    - echo "kubectl found: $(which kubectl)"
+    - echo "kubectl version: $(kubectl version --client --short)"
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - mkdir -p /tmp
@@ -31,7 +29,6 @@ cluster-connection:
       echo "✅ Текущий контекст: $CURRENT_CONTEXT"
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
   after_script:
-    # Очистка временных файлов
     - rm -f /tmp/kubeconfig.yaml || true
 
 # deploy-docker:
@@ -59,7 +56,6 @@ deploy:
   image: python:3.11-alpine
   tags: ["docker"]
   before_script:
-    # Устанавливем kubectl в Python 
     - apk add --no-cache curl
     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl
