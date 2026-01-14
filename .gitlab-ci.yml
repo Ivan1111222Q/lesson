@@ -11,6 +11,7 @@ variables:
 build:
   stage: build
   image: docker:24.0
+  tags: ["docker"]
   services:
     - docker:24.0-dind
   script:
