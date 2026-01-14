@@ -56,7 +56,7 @@ cluster-connection:
 #   stage: build
 #   image: docker:20.10.17
 #   script:
-#     - echo "🚀 ПРОВЕРКА DOCKER КЛИЕНТАf"
+#     - echo "🚀 ПРОВЕРКА DOCKER КЛИЕНТА"
 #     - docker --version
 #     - echo "✅ Docker клиент готов"
 #     - echo "ℹ️  Для использования Docker daemon нужен privileged режим в runner'е"
