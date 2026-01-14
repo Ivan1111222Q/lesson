@@ -7,10 +7,10 @@ test-shell-runner:
   tags: ["shell"]
   script:
     - echo "TEST SHELL RUNNER"
-    - echo "User: $(whoami)"
-    - echo "Home: $HOME"
-    - echo "PWD: $(pwd)"
-    - echo "PATH: $PATH"
+    - echo "User $(whoami)"
+    - echo "Home $HOME"
+    - echo "PWD $(pwd)"
+    - echo "PATH $PATH"
     - echo "SYSTEM CHECK"
     - uname -a
     - echo "COMMAND CHECK"
