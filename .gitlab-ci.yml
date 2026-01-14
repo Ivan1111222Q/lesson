@@ -57,6 +57,17 @@ deploy:
   script:
     - mkdir -p ~/.kube/
     - echo "$KUBECONFIG_CONTENT" > ~/.kube/config
+
+    # Проверяем что есть python3
+    - python3 --version
+    
+    # Устанавливаем pyyaml через apt (быстрее)
+    - sudo apt-get update
+    - sudo apt-get install -y python3-yaml
+    
+    # Или используем pip из системного пакета
+    - python3 -m pip install --user pyyaml 2>/dev/null || sudo python3 -m pip install pyyaml
+
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
     - pip3 install pyyaml
     - python3 test2.py
