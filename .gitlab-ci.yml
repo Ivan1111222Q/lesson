@@ -2,14 +2,23 @@ stages:
   - test
   - build
 
-claster-connection:
+cluster-connection:
   stage: test
-  # Используем образ с kubectl уже установленным (но не как entrypoint)
-  # image: alpine/k8s:1.29.0
   tags: ["shell"]
+  before_script:
+    # Явная загрузка профиля для shell executor
+    - source ~/.bashrc || true
+    - source ~/.profile || true
+    # Проверка наличия kubectl
+    - which kubectl || (echo "❌ kubectl не найден в PATH" && exit 1)
+    - kubectl version --client || (echo "❌ kubectl не работает" && exit 1)
+    - echo "✅ kubectl найден: $(which kubectl)"
+    - echo "✅ kubectl версия: $(kubectl version --client --short)"
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
+    - mkdir -p /tmp
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
+    - chmod 600 /tmp/kubeconfig.yaml
     - echo "=== ТЕСТ ПОДКЛЮЧЕНИЯ ==="
     - kubectl --kubeconfig=/tmp/kubeconfig.yaml cluster-info
     - echo "=== ИНФОРМАЦИЯ О КЛАСТЕРЕ ==="
@@ -21,6 +30,9 @@ claster-connection:
       CURRENT_CONTEXT=$(kubectl --kubeconfig=/tmp/kubeconfig.yaml config current-context)
       echo "✅ Текущий контекст: $CURRENT_CONTEXT"
     - echo "✅ ТЕСТ ПРОЙДЕН УСПЕШНО!"
+  after_script:
+    # Очистка временных файлов
+    - rm -f /tmp/kubeconfig.yaml || true
 
 # deploy-docker:
 #   stage: build
