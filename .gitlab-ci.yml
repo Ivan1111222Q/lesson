@@ -5,7 +5,8 @@ stages:
 claster-connection:
   stage: test
   # Используем образ с kubectl уже установленным (но не как entrypoint)
-  image: alpine/k8s:1.29.0
+  # image: alpine/k8s:1.29.0
+  tags: ["shell"]
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
@@ -55,6 +56,5 @@ deploy:
   script:
     - echo "🚀 УСТАНОВКА ПРИЛОЖЕНИЙ"
     - pip3 install pyyaml
-    - kubectl cluster-info
     - python3 test2.py
     - echo "Тесты прошли"
