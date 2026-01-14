@@ -2,6 +2,25 @@ stages:
   - test
   - build
 
+test-shell-runner:
+  stage: test
+  tags: ["shell"]
+  script:
+    - echo "=== ТЕСТ SHELL RUNNER ==="
+    - echo "Пользователь: $(whoami)"
+    - echo "Домашняя директория: $HOME"
+    - echo "Рабочая директория: $(pwd)"
+    - echo "PATH: $PATH"
+    - echo "=== ПРОВЕРКА СИСТЕМЫ ==="
+    - uname -a
+    - echo "=== ПРОВЕРКА КОМАНД ==="
+    - which bash || echo "bash не найден"
+    - which kubectl || echo "kubectl не найден"
+    - which helm || echo "helm не найден"
+    - echo "=== ПРОВЕРКА ПЕРЕМЕННЫХ ОКРУЖЕНИЯ ==="
+    - env | grep -E "(CI|GITLAB|RUNNER)" | head -10
+    - echo "✅ SHELL RUNNER РАБОТАЕТ!"
+
 cluster-connection:
   stage: test
   image: alpine:latest
