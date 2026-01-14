@@ -2,25 +2,6 @@ stages:
   - test
   - build
 
-test-shell-runner:
-  stage: test
-  tags: ["shell"]
-  script:
-    - echo "TEST SHELL RUNNER"
-    - echo "User $(whoami)"
-    - echo "Home $HOME"
-    - echo "PWD $(pwd)"
-    - echo "PATH $PATH"
-    - echo "SYSTEM CHECK"
-    - uname -a
-    - echo "COMMAND CHECK"
-    - which bash || echo "bash not found"
-    - which kubectl || echo "kubectl not found"
-    - which helm || echo "helm not found"
-    - echo "ENVIRONMENT VARIABLES"
-    - env | grep -E "(CI|GITLAB|RUNNER)" | head -10
-    - echo "SHELL RUNNER WORKS!"
-
 cluster-connection:
   stage: test
   image: alpine:latest
