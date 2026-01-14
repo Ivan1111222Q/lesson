@@ -6,7 +6,7 @@ claster-connection:
   stage: test
   # Используем образ с kubectl уже установленным (но не как entrypoint)
   # image: alpine/k8s:1.29.0
-  # tags: ["shell"]
+  tags: ["shell"]
   script:
     - echo "=== СОЗДАНИЕ KUBECONFIG ==="
     - echo "$KUBECONFIG_CONTENT" > /tmp/kubeconfig.yaml
@@ -47,7 +47,7 @@ deploy:
   image: python:3.11-alpine
   tags: ["docker"]
   before_script:
-    # Устанавливем kubectl в Python образe
+    # Устанавливем kubectl в Python образer
     - apk add --no-cache curl
     - curl -LO "https://dl.k8s.io/release/v1.28.0/bin/linux/amd64/kubectl"
     - chmod +x kubectl
