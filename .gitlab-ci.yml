@@ -6,7 +6,7 @@ variables:
   REGISTRY: cr.yandex
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
-  REGISTRY_URL: $REGISTRY/$REGISTRY_ID/$service-service:$CI_COMMIT_SHORT_SHA
+  
 
 # build:
 #   stage: build
@@ -32,11 +32,11 @@ build:
    - cat "${SERVICE_ACCOUNT_KEY_JSON}" | docker login --username json_key --password-stdin cr.yandex
    - |
      for service in frontend users orders products reviews; do
+       REGISTRY_URL="${REGISTRY}/${REGISTRY_ID}/${service}-service:${CI_COMMIT_SHORT_SHA}"
        echo "Building $service..."
-       ls
        cd ${service}-service
-       docker build -t $REGISTRY_URL .
-       docker push $REGISTRY_URL
+       docker build -t "$REGISTRY_URL" .
+       docker push "$REGISTRY_URL"
        cd ..
        echo "$service done"
      done
