@@ -15,7 +15,7 @@ build:
   services:
     - docker:24.0-dind
   before_script:
-    # Аутентификация с JSON ключом (в GitLab это работает!)
+    # Аутентификация с JSON ключом (в GitLab это работае!)
     - echo "${SERVICE_ACCOUNT_KEY_JSON}" | docker login --username json_key --password-stdin cr.yandex  
   script:
    - docker pull alpine:latest 
