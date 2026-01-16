@@ -14,10 +14,15 @@ build:
   tags: ["docker"]
   services:
     - docker:24.0-dind
+  before_script:
+    # Аутентификация с JSON ключом (в GitLab это работает!)
+    - echo "${SERVICE_ACCOUNT_KEY_JSON}" | docker login --username json_key --password-stdin cr.yandex  
   script:
    - docker pull alpine:latest 
    - docker tag alpine:latest $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
    - docker push $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
+  after_script:
+   - docker logout cr.yandex 
 
 
 
