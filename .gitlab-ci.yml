@@ -4,7 +4,6 @@ stages:
 
 variables:
   REGISTRY: cr.yandex
-  REGISTRY_ID: crpiqtsurn6alildl4cb
   DOCKER_HOST: tcp://docker:2375
   DOCKER_TLS_CERTDIR: ""
 
@@ -15,7 +14,6 @@ build:
   services:
     - docker:24.0-dind 
   script:
-  # Читаем из файла
    - cat "${SERVICE_ACCOUNT_KEY_JSON}" | docker login --username json_key --password-stdin cr.yandex
    - docker pull alpine:latest 
    - docker tag alpine:latest $REGISTRY/$REGISTRY_ID:$CI_COMMIT_SHORT_SHA
