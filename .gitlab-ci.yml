@@ -33,6 +33,7 @@ build:
      for service in frontend users orders products reviews; do
        echo "Building $service..."
        cd ${service}-service
+       ls
        docker build -t $REGISTRY/$REGISTRY_ID/$service:$CI_COMMIT_SHORT_SHA .
        docker push $REGISTRY/$REGISTRY_ID/$service:$CI_COMMIT_SHORT_SHA
        cd ..
