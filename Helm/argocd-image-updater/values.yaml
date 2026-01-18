@@ -154,7 +154,10 @@ config:
   git.commit-signing-method: ""
 
   # -- Argo CD Image Update log level
-  log.level: "info"
+  log.level: "debug"
+
+  applicationKindFilter: annotation
+  applicationMatchMode: annotation
 
   # -- Argo CD Image Updater registries list configuration. More information [here](https://argocd-image-updater.readthedocs.io/en/stable/configuration/registries/).
   registries:
@@ -163,7 +166,7 @@ config:
       api_url: https://cr.yandex
       prefix: cr.yandex
       ping: yes
-      # Креды из Secret (настроишь позже)
+      # Креды из Secret в формате json_key:<json_key>
       credentials: secret:argo-cd/argocd-image-updater-secret#yandex-registry
       # Опционально: таймаут кредов (если токен истекает)
       credsexpire: 24h

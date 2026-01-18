@@ -10,7 +10,7 @@ metadata:
   annotations:
     argocd-image-updater.argoproj.io/image-list: users=cr.yandex/crpiqtsurn6alildl4cb/users-service
     argocd-image-updater.argoproj.io/users.update-strategy: latest
-    argocd-image-updater.argoproj.io/users.allow-tags: regexp:^[0-9a-f]{7}$
+    argocd-image-updater.argoproj.io/users.allow-tags: "regexp:^.*$"
     argocd-image-updater.argoproj.io/users.force-update: "false"
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы

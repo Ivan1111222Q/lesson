@@ -7,11 +7,13 @@ metadata:
   name: {{ .Values.config.name }}
   namespace: {{ include "argocd-image-updater.namespace" . | quote }}
 data:
-  {{- with .Values.config.registries }}
+  {{- if .Values.config }}
+  config.yaml: |
+    {{- toYaml .Values.config | nindent 4 }}
+  {{- end }}
+  
+  {{- if .Values.config.registries }}
   registries.conf: |
     registries:
-      {{- toYaml . | nindent 6 }}
-  {{- end }}
-  {{- range $key, $value := (omit .Values.config "name" "registries" "sshConfig") }}
-  {{ $key }}: {{ $value | quote }}
+      {{- toYaml .Values.config.registries | nindent 6 }}
   {{- end }}
