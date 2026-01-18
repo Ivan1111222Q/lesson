@@ -7,6 +7,11 @@ kind: Application
 metadata:
   name: products-service
   namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: products=cr.yandex/crpiqtsurn6alildl4cb/products-service
+    argocd-image-updater.argoproj.io/products.update-strategy: latest
+    argocd-image-updater.argoproj.io/products.allow-tags: regexp:^[0-9a-f]{7}$
+    argocd-image-updater.argoproj.io/products.force-update: "false"
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
 spec:

@@ -7,6 +7,11 @@ kind: Application
 metadata:
   name: reviews-service
   namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: reviews=cr.yandex/crpiqtsurn6alildl4cb/reviews-service
+    argocd-image-updater.argoproj.io/reviews.update-strategy: latest
+    argocd-image-updater.argoproj.io/reviews.allow-tags: regexp:^[0-9a-f]{7}$
+    argocd-image-updater.argoproj.io/frreviewsontend.force-update: "false"
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
 spec:

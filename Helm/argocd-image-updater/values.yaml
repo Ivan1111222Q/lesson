@@ -136,10 +136,10 @@ config:
   kube.events: false
 
   # -- Username to use for Git commits
-  git.user: ""
+  git.user: "sonylabs"
 
   # -- E-Mail address to use for Git commits
-  git.email: ""
+  git.email: "sonylabs@yandex.ru"
 
   # -- Changing the Git commit message
   git.commit-message-template: ""
@@ -157,7 +157,16 @@ config:
   log.level: "info"
 
   # -- Argo CD Image Updater registries list configuration. More information [here](https://argocd-image-updater.readthedocs.io/en/stable/configuration/registries/).
-  registries: []
+  registries:
+    # 1. Yandex Container Registry
+    - name: Yandex Container Registry
+      api_url: https://cr.yandex
+      prefix: cr.yandex
+      ping: yes
+      # Креды из Secret (настроишь позже)
+      credentials: secret:argo-cd/argocd-image-updater-secret#yandex-registry
+      # Опционально: таймаут кредов (если токен истекает)
+      credsexpire: 24h
     # - name: Docker Hub
     #   api_url: https://registry-1.docker.io
     #   ping: yes
@@ -235,7 +244,7 @@ serviceAccount:
   #  azure.workload.identity/use: "true"
   # -- The name of the service account to use.
   # If not set and create is true, a name is generated using the fullname template.
-  name: ""
+  name: "argocd-image-updater-controller"
 
 # -- Pod Annotations for the deployment
 podAnnotations: {}
