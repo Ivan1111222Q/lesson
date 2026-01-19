@@ -14,6 +14,11 @@ metadata:
     
     argocd-image-updater.argoproj.io/write-back-method: git:secret:argo-cd/git-creds
     argocd-image-updater.argoproj.io/git-branch: argocd
+    argocd-image-updater.argoproj.io/write-back-target: "helmvalues:../values/orders-service.yaml"
+    argocd-image-updater.argoproj.io/orders.helm.image-tag: image.tag
+
+
+
     
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
