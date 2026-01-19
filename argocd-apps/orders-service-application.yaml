@@ -9,9 +9,12 @@ metadata:
   namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
   annotations:
     argocd-image-updater.argoproj.io/image-list: orders=cr.yandex/crpiqtsurn6alildl4cb/orders-service
-    argocd-image-updater.argoproj.io/orders.update-strategy: latest
-    argocd-image-updater.argoproj.io/orders.allow-tags: "regexp:^.*$"
-    argocd-image-updater.argoproj.io/orders.force-update: "false"
+    argocd-image-updater.argoproj.io/orders.update-strategy: semver
+    argocd-image-updater.argoproj.io/orders.allow-tags: "regexp:^v[0-9]+\\.[0-9]+\\.[0-9]+$"
+    
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argo-cd/git-creds
+    argocd-image-updater.argoproj.io/git-branch: argocd
+    
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
 spec:
