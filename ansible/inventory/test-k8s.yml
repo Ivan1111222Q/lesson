@@ -1,0 +1,64 @@
+- name: Создание Namespace в Yandex Cloud Kubernetes
+  hosts: localhost
+  connection: local
+  vars:
+    kubeconfig: "{{ lookup('env', 'HOME') }}/.kube/config"
+    namespace_name: "my-app"
+  
+  tasks:
+    - name: Проверить существует ли namespace
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubeconfig }}"
+        context: yc-lesson
+        kind: Namespace
+        name: "{{ namespace_name }}"
+      register: namespace_check
+      ignore_errors: yes
+    
+    - name: Создать Namespace если не существует
+      kubernetes.core.k8s:
+        kubeconfig: "{{ kubeconfig }}"
+        context: yc-lesson
+        api_version: v1
+        kind: Namespace
+        name: "{{ namespace_name }}"
+        state: present
+      when: namespace_check.resources | length == 0
+      register: create_result
+    
+    - name: Получить информацию о созданном namespace
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubeconfig }}"
+        context: yc-lesson
+        kind: Namespace
+        name: "{{ namespace_name }}"
+      register: ns_info
+    
+    - name: Показать результат
+      debug:
+        msg: |
+          {% if namespace_check.resources | length > 0 %}
+          ℹ️  Namespace '{{ namespace_name }}' уже существует
+          {% else %}
+          ✅ Namespace '{{ namespace_name }}' успешно создан
+          {% endif %}
+          
+          Статус: {{ ns_info.resources[0].status.phase }}
+          Время создания: {{ ns_info.resources[0].metadata.creationTimestamp }}
+          
+          Всего namespaces в кластере: {{ ns_info.resources | length }}
+    
+    - name: Получить все namespaces для проверки
+      kubernetes.core.k8s_info:
+        kubeconfig: "{{ kubeconfig }}"
+        context: yc-lesson
+        kind: Namespace
+      register: all_namespaces
+      
+    - name: Показать список всех namespaces
+      debug:
+        msg: |
+          📋 Все namespaces в кластере ({{ all_namespaces.resources | length }}):
+          {% for ns in all_namespaces.resources %}
+            - {{ ns.metadata.name }}
+          {% endfor %}

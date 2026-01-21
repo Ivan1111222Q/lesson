@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Отзывы - Интернет-магазин</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Интернет-магазин</h1>
+            <nav>
+                <a href="/index.html">Каталог</a>
+                <a href="/cart.html">Корзина (<span id="cart-count">0</span>)</a>
+                <a href="/profile.html">Профиль</a>
+            </nav>
+            <div class="user-info"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2>Отзывы о товаре</h2>
+
+        <div id="rating-summary"></div>
+
+        <div id="create-review-form" class="hidden" style="background: #fff; padding: 20px; margin: 20px 0; border-radius: 5px;">
+            <h3>Написать отзыв</h3>
+            <div class="form-group">
+                <label>Рейтинг:</label>
+                <select id="review-rating">
+                    <option value="5">5 - Отлично</option>
+                    <option value="4">4 - Хорошо</option>
+                    <option value="3">3 - Нормально</option>
+                    <option value="2">2 - Плохо</option>
+                    <option value="1">1 - Ужасно</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Отзыв:</label>
+                <textarea id="review-text" rows="4"></textarea>
+            </div>
+            <div class="form-group">
+                <label>Фотографии (до 5 шт):</label>
+                <input type="file" id="review-photos" multiple accept="image/*" max="5">
+                <div id="photo-preview" class="file-preview"></div>
+            </div>
+            <button onclick="submitReview()">Отправить отзыв</button>
+            <button onclick="document.getElementById('create-review-form').classList.add('hidden')">Отмена</button>
+        </div>
+
+        <button onclick="showReviewForm()" class="btn">Написать отзыв</button>
+
+        <div id="reviews-container"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        const urlParams = new URLSearchParams(window.location.search);
+        const productId = parseInt(urlParams.get('product_id'));
+
+        async function loadReviews() {
+            const container = document.getElementById('reviews-container');
+            const ratingDiv = document.getElementById('rating-summary');
+
+            App.showLoading(container);
+
+            try {
+                const [reviews, rating] = await Promise.all([
+                    ReviewsAPI.getProductReviews(productId),
+                    ReviewsAPI.getProductRating(productId)
+                ]);
+
+                ratingDiv.innerHTML = `
+                    <div style="background: #fff; padding: 15px; margin-bottom: 20px; border-radius: 5px;">
+                        <h3>Общий рейтинг: ${rating.average_rating.toFixed(1)} ${App.renderStars(rating.average_rating)}</h3>
+                        <p>Всего отзывов: ${rating.total_reviews} | Верифицированных покупок: ${rating.verified_purchases}</p>
+                    </div>
+                `;
+
+                if (reviews.length === 0) {
+                    container.innerHTML = '<p>Отзывов пока нет. Будьте первым!</p>';
+                    return;
+                }
+
+                container.innerHTML = reviews.map(review => `
+                    <div class="review-card">
+                        <div class="review-rating">${App.renderStars(review.rating)}</div>
+                        ${review.is_verified_purchase ? '<span style="color: #27ae60;">✓ Подтверждённая покупка</span>' : ''}
+                        <p>${review.text}</p>
+                        ${review.photos.length > 0 ? `
+                            <div class="review-photos">
+                                ${review.photos.map(photo => `
+                                    <img src="${ReviewsAPI.getPhotoUrl(review.id, photo)}"
+                                         alt="Photo"
+                                         onclick="window.open('${ReviewsAPI.getPhotoUrl(review.id, photo)}', '_blank')">
+                                `).join('')}
+                            </div>
+                        ` : ''}
+                        <small>Дата: ${App.formatDate(review.created_at)}</small>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="error">Ошибка загрузки отзывов: ${error.message}</p>`;
+            }
+        }
+
+        function showReviewForm() {
+            if (!App.requireAuth()) return;
+            document.getElementById('create-review-form').classList.remove('hidden');
+        }
+
+        async function submitReview() {
+            const user = Storage.getUser();
+            const rating = document.getElementById('review-rating').value;
+            const text = document.getElementById('review-text').value;
+            const photosInput = document.getElementById('review-photos');
+
+            if (!text) {
+                alert('Введите текст отзыва');
+                return;
+            }
+
+            // Нужно найти order_id - для упрощения используем 1
+            const orderId = prompt('Введите номер вашего заказа:');
+            if (!orderId) return;
+
+            const formData = new FormData();
+            formData.append('user_id', user.id);
+            formData.append('product_id', productId);
+            formData.append('order_id', orderId);
+            formData.append('rating', rating);
+            formData.append('text', text);
+
+            for (let i = 0; i < photosInput.files.length && i < 5; i++) {
+                formData.append('photos', photosInput.files[i]);
+            }
+
+            try {
+                await ReviewsAPI.create(formData);
+                App.showSuccess('Отзыв успешно добавлен!');
+                document.getElementById('create-review-form').classList.add('hidden');
+                document.getElementById('review-text').value = '';
+                document.getElementById('review-photos').value = '';
+                loadReviews();
+            } catch (error) {
+                App.showError(`Ошибка: ${error.message}`);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            if (productId) {
+                loadReviews();
+            } else {
+                document.querySelector('.container').innerHTML = '<p class="error">Товар не указан</p>';
+            }
+        });
+    </script>
+</body>
+</html>

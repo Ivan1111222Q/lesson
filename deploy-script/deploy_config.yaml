@@ -1,0 +1,12 @@
+auto_version: true
+dockerfile_path: /Users/spirit/Downloads/LS/lesson4356/users-service
+dockerhub: null
+git_branch: example_chart
+helm_chart_path: /Users/spirit/Downloads/LS/lesson4356/Helm/python-service-chart
+helm_namespace: lesson4356
+helm_release: users
+image: users-service
+registry: cr.yandex/crpiqtsurn6alildl4cb
+tag: '2.26'
+update_values: true
+values_file_path: /Users/spirit/Downloads/LS/lesson4356/Helm/values/users-service.yaml

@@ -1,0 +1,19 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  labels:
+    {{- include "argocd-image-updater.labels" . | nindent 4 }}
+  name: {{ .Values.config.name }}
+  namespace: {{ include "argocd-image-updater.namespace" . | quote }}
+data:
+  {{- if .Values.config }}
+  config.yaml: |
+    {{- toYaml .Values.config | nindent 4 }}
+  {{- end }}
+  
+  {{- if .Values.config.registries }}
+  registries.conf: |
+    registries:
+      {{- toYaml .Values.config.registries | nindent 6 }}
+  {{- end }}

@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: products-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: products-service
+  template:
+    metadata:
+      labels:
+        app: products-service
+    spec:
+      containers:
+      - name: products-service
+        image: products-service:5.0  
+        ports:
+        - containerPort: 8001
+        envFrom:
+        - configMapRef:
+            name: products-config
+        - secretRef:
+            name: postgres-secret    
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8001
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ready
+        #     port: 8001
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 3
+        #   timeoutSeconds: 2
+        #   failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"          
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: products-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: products-service
+  type: NodePort
+  ports:
+    - port      : 8001         # Порт сервиса внутри кластера
+      targetPort: 8001         # Порт внутри контейнера
+      nodePort  : 30001        # Порт наружу

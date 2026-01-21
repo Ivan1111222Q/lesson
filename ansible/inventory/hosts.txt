@@ -1,0 +1,9 @@
+[staging_servers]
+ya  ansible_host=158.160.206.106  
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
+
+[staging_servers:vars]
+ansible_user=lesson
+ansible_ssh_private_key_file=/Users/spirit/.ssh/id_ed25519

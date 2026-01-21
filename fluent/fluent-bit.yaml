@@ -1,0 +1,33 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: fluent-bit-config
+  namespace: lesson4356
+data:
+  fluent-bit.conf: |
+    [SERVICE]
+        Flush        1
+        Daemon       Off
+        Log_Level    info
+        Parsers_File parsers.conf
+
+    [INPUT]
+        Name              tail
+        Path              /var/log/containers/*.log
+        multiline.parser  docker, cri
+        Tag               kube.*
+        Refresh_Interval  5
+        Mem_Buf_Limit     5MB
+        Skip_Long_Lines   On
+
+    [OUTPUT]
+        Name  es
+        Match *
+        Host  elasticsearch
+        Port  9200
+        Index logs-lesson4356
+        Type  _doc
+        Logstash_Format On
+        Replace_Dots    On
+        Retry_Limit     False
+        Suppress_Type_Name On

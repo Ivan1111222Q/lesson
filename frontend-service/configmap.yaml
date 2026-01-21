@@ -1,0 +1,80 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: frontend-nginx-config
+  namespace: lesson4356
+data:
+  nginx.conf: |
+    user  nginx;
+    worker_processes  auto;
+
+    events {
+        worker_connections 1024;
+    }
+
+    http {
+        include       /etc/nginx/mime.types;
+        default_type  application/octet-stream;
+        sendfile        on;
+        keepalive_timeout  65;
+
+        server {
+            listen 80;
+            server_name localhost;
+            root /usr/share/nginx/html;
+            index index.html;
+
+
+            # Логирование
+            access_log /dev/stdout;
+            error_log /dev/stderr;
+
+            location / {
+                try_files $uri $uri/ /index.html;
+            }
+
+            location /health {
+                access_log off;                    # Не логируем health checks
+                return 200 "healthy\n";           # Простой ответ
+                add_header Content-Type text/plain;
+            }
+
+            location /api/products/ {
+                proxy_pass http://products-service:8001;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            location /api/orders/ {
+                proxy_pass http://orders-service:8002;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+            
+            location /metrics {
+                access_log off;
+                default_type text/plain;
+                return 200 "# HELP nginx_up Status of nginx\n# TYPE nginx_up gauge\nnginx_up 1\n";
+            }
+
+            location /api/users/ {
+                proxy_pass http://users-service:8003;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            location /api/reviews/ {
+                proxy_pass http://reviews-service:8004;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+            }
+
+            types {
+                text/html html htm;
+                text/css css;
+                application/javascript js;
+                image/jpeg jpg jpeg;
+                image/png png;
+            }
+        }
+    }

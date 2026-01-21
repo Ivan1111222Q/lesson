@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: users-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: users-service
+  template:
+    metadata:
+      labels:
+        app: users-service
+    spec:
+      containers:
+      - name: users-service
+        image: users-service:4.0   
+        ports:
+        - containerPort: 8003
+        envFrom:
+        - configMapRef:
+            name: users-config
+        - secretRef:
+            name: users-service-secret 
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8003
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ready
+        #     port: 8003
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 3
+        #   timeoutSeconds: 2
+        #   failureThreshold: 3
+        resources:
+          requests:
+            memory: "128Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"                  
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: users-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: users-service
+  type: NodePort
+  ports:
+    - port      : 8003         # Порт сервиса внутри кластера
+      targetPort: 8003         # Порт внутри контейнера
+      nodePort  : 30003        # Порт наружу

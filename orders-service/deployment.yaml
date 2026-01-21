@@ -1,0 +1,63 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: orders-service-deployment
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: orders-service
+  template:
+    metadata:
+      labels:
+        app: orders-service
+    spec:
+      containers:
+      - name: orders-service
+        image: orders-service:5.0    
+        ports:
+        - containerPort: 8002
+        envFrom:
+        - configMapRef:
+            name: orders-config
+        - secretRef:
+            name: postgres-secret    
+        livenessProbe:
+          httpGet:
+            path: /live
+            port: 8002
+          initialDelaySeconds: 15
+          periodSeconds: 5
+          timeoutSeconds: 2
+          failureThreshold: 3
+        # readinessProbe:
+        #   httpGet:
+        #     path: /ready
+        #     port: 8002
+        #   initialDelaySeconds: 10
+        #   periodSeconds: 3
+        #   timeoutSeconds: 2
+        #   failureThreshold: 3
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "250m"
+          limits:
+            memory: "512Mi"
+            cpu: "1000m"         
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: orders-service
+  namespace: lesson4356
+spec:
+  selector:
+    app: orders-service
+  type: NodePort
+  ports:
+    - port      : 8002         # Порт сервиса внутри кластера
+      targetPort: 8002         # Порт внутри контейнера
+      nodePort  : 30002        # Порт наружу
