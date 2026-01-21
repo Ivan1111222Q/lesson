@@ -1,0 +1,73 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: elasticsearch
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: elasticsearch
+  template:
+    metadata:
+      labels:
+        app: elasticsearch
+    spec:
+      containers:
+        - name: elasticsearch
+          image: elasticsearch:8.17.4
+          ports:
+            - containerPort: 9200
+            - containerPort: 9300
+          env:
+            - name: node.name
+              value: "elasticsearch"
+            - name: discovery.type
+              value: "single-node"
+            - name: xpack.security.enabled
+              value: "false"
+            - name: ELASTIC_PASSWORD
+              value: "changeme"
+          volumeMounts:
+            - name: elasticsearch-data
+              mountPath: /usr/share/elasticsearch/data
+          resources:
+            requests:
+              memory: "1Gi"
+              cpu: "500m"
+            limits:
+              memory: "2Gi"
+              cpu: "1"
+      volumes:
+        - name: elasticsearch-data
+          persistentVolumeClaim:
+            claimName: elasticsearch-pvc
+
+---
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: elasticsearch-pvc
+  namespace: lesson4356
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Gi
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: elasticsearch
+  namespace: lesson4356
+spec:
+  selector:
+    app: elasticsearch
+  type: NodePort   # Можно заменить на LoadBalancer, если в облаке
+  ports:
+    - port      : 9200        # Внутренний порт сервиса
+      targetPort: 9200        # Порт контейнера
+      nodePort  : 32000       # Порт на нодах, на который можно зайти извне (в пределах 30000-32767)

@@ -1,0 +1,32 @@
+# Argo CD Application для orders-service.
+# Так выносим GitOps-манифесты в отдельную директорию (Helm/argocd-apps),
+# чтобы отделить управление Argo CD от самих Helm-чартов.
+# По аналогии можно добавить приложения для других сервисов, меняя valueFiles/имя.
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: prometheus-node-exporter
+  namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
+spec:
+  project: default                 # Используем дефолтный проект (можно вынести в отдельный AppProject при необходимости)
+  source:
+    repoURL: git@github.com:FerapontovAnton/lesson4356.git  # Git-репозиторий с chart'ом и values
+    targetRevision: argocd          # Следить за актуальной веткой (можно зафиксировать тег/branch)
+    path: Helm/prometheus-node-exporter # Путь до Helm-чарта для python-сервисов
+    helm:
+      releaseName: prometheus-node-exporter  # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
+      valueFiles:
+        - ./values.yaml # Подключаем сервис-специфичные values; путь относительно директории chart'а
+  destination:
+    server: https://kubernetes.default.svc # Деплой в текущий кластер, куда установлено Argo CD
+    namespace: lesson4356           # Namespace, в который уйдут все ресурсы сервиса
+  syncPolicy:
+    automated:
+      prune: true                   # Удалять ресурсы, исчезнувшие из Git (избегаем дрейфа)
+      selfHeal: true                # Самовосстанавливать дрейфующие ресурсы без ручного sync
+    syncOptions:
+      - CreateNamespace=true        # Создавать namespace автоматически, если его нет
+      - PrunePropagationPolicy=foreground # Ждём удаления дочерних ресурсов при prune (без "зависших" объектов)
+      - ApplyOutOfSyncOnly=true     # Применять только изменённые ресурсы, ускоряя синк

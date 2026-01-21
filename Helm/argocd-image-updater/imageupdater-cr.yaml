@@ -1,0 +1,34 @@
+apiVersion: argocd-image-updater.argoproj.io/v1alpha1
+kind: ImageUpdater
+metadata:
+  name: applications-with-annotations
+  namespace: argo-cd
+spec:
+  # Namespace, где находятся ArgoCD Applications
+  namespace: argo-cd
+
+  # Глобальные настройки обновления
+  commonUpdateSettings:
+    updateStrategy: newest-build
+
+  # Настройки записи обратно (write-back)
+  writeBackConfig:
+    # Формат: git:secret:namespace/secret-name
+    method: "git:secret:argo-cd/git-creds"
+    gitConfig:
+      repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
+      branch: argocd
+      # Путь относительно source.path Application (Helm/python-service-chart)
+      writeBackTarget: "helmvalues:../values/orders-service.yaml"
+
+  # Список ссылок на Applications
+  applicationRefs:
+    # Orders service - используем Git write-back
+    - namePattern: orders-service
+      images:
+        - alias: orders
+          imageName: cr.yandex/crpiqtsurn6alildl4cb/orders-service
+          manifestTargets:
+            helm:
+              name: image.repository
+              tag: image.tag

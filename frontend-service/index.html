@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интернет-магазин - Каталог товаров</title>
+    <link rel="stylesheet" href="/css/style.css">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Интернет-магазин</h1>
+            <nav>
+                <a href="/index.html">Каталог</a>
+                <a href="/cart.html">Корзина (<span id="cart-count">0</span>)</a>
+                <a href="/profile.html">Профиль</a>
+            </nav>
+            <div class="user-info"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <h2>Каталог товаров</h2>
+
+        <div class="filter-section">
+            <label for="category">Категория:</label>
+            <select id="category" onchange="loadProducts()">
+                <option value="">Все товары</option>
+                <option value="electronics">Электроника</option>
+                <option value="clothing">Одежда</option>
+                <option value="books">Книги</option>
+                <option value="other">Другое</option>
+            </select>
+        </div>
+
+        <div id="products-container" class="products-grid"></div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        async function loadProducts() {
+            const container = document.getElementById('products-container');
+            App.showLoading(container);
+
+            try {
+                const category = document.getElementById('category').value;
+                const products = await ProductsAPI.getAll(category || null);
+
+                if (products.length === 0) {
+                    container.innerHTML = '<p>Товары не найдены</p>';
+                    return;
+                }
+
+                container.innerHTML = products.map(product => `
+                    <div class="product-card">
+                        <h3>${product.name}</h3>
+                        <p>${product.description}</p>
+                        <div class="price">${App.formatPrice(product.price)}</div>
+                        <div class="stock">В наличии: ${product.stock}</div>
+                        <div style="margin-top: 10px;">
+                            <button onclick="addToCart(${product.id}, '${product.name}', ${product.price})">
+                                В корзину
+                            </button>
+                            <button onclick="viewReviews(${product.id})">
+                                Отзывы
+                            </button>
+                        </div>
+                    </div>
+                `).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="error">Ошибка загрузки товаров: ${error.message}</p>`;
+            }
+        }
+
+        function addToCart(productId, name, price) {
+            const product = { id: productId, name, price };
+            Storage.addToCart(product, 1);
+            App.updateCartCount();
+            App.showSuccess('Товар добавлен в корзину!');
+        }
+
+        function viewReviews(productId) {
+            window.location.href = `/reviews.html?product_id=${productId}`;
+        }
+
+        // Load products on page load
+        document.addEventListener('DOMContentLoaded', () => {
+            loadProducts();
+        });
+    </script>
+</body>
+</html>

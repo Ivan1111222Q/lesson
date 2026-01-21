@@ -1,0 +1,52 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: kibana
+  namespace: lesson4356
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: kibana
+  template:
+    metadata:
+      labels:
+        app: kibana
+    spec:
+      containers:
+        - name: kibana
+          image: kibana:8.17.4
+          ports:
+            - containerPort: 5601
+          env:
+            - name: ELASTICSEARCH_HOSTS
+              value: "http://elasticsearch:9200"
+            - name: ELASTICSEARCH_SERVICEACCOUNT_TOKEN
+              value: "eyJhbGciOiJSUzI1NiIsImtpZCI6IkhDRTFjSXo1TWRITjlhZHViek1GakpBejQ3ZlJ0cFAwZzlWZ2dUMzg2a0kifQ.eyJhdWQiOlsiaHR0cHM6Ly9rdWJlcm5ldGVzLmRlZmF1bHQuc3ZjLmNsdXN0ZXIubG9jYWwiXSwiZXhwIjoxNzYyNDQxMzYwLCJpYXQiOjE3NjI0Mzc3NjAsImlzcyI6Imh0dHBzOi8va3ViZXJuZXRlcy5kZWZhdWx0LnN2Yy5jbHVzdGVyLmxvY2FsIiwianRpIjoiM2U4OThmZGMtMmEzYi00ZDY5LTlhNzYtOTliNDRlYzcyZjM4Iiwia3ViZXJuZXRlcy5pbyI6eyJuYW1lc3BhY2UiOiJsZXNzb240MzU2Iiwic2VydmljZWFjY291bnQiOnsibmFtZSI6ImtpYmFuYS1zYSIsInVpZCI6ImU2YTBjYmE4LTRlMjctNGE1My04YTNmLTYyMzQzMjQzZTY4OCJ9fSwibmJmIjoxNzYyNDM3NzYwLCJzdWIiOiJzeXN0ZW06c2VydmljZWFjY291bnQ6bGVzc29uNDM1NjpraWJhbmEtc2EifQ.crpWHt4aGD39WLcByyujBFaXNvEgHKp1swT14GIPlIJKMbfmj_ZG6O9Rhrx5SkzL0sEDLkjzy_8CLFJrbGepwn5FcjMfUh38D9Z5YH-eA-p_77Sv78gISczDHtQVuMmHuBfdTe_k25MaJyJ9bTA4TMFyeGinu6NABzz3Z2kGJz4rbefN23fPkTZO8OR2ee3L5-HgwGPmhg2BFIrpOPG8vYnNDnhtIEc3_RXsyBpUW8nvBLxNTlb7bbeZqhGMCpPLq8lD_d_9dnMLgI-DaXamYe-KcX1EVnvM3enDQoqJ-7QkPn2FjkAc7Qsmez3HSYOrlA5deF-TNlCg1USow1uBNA"
+            - name: ELASTICSEARCH_SSL_VERIFICATIONMODE
+              value: "none"
+            - name: XPACK_SECURITY_ENABLED
+              value: "false"
+          readinessProbe:
+            httpGet:
+              path: /api/status
+              port: 5601
+            initialDelaySeconds: 10
+            periodSeconds: 15
+            timeoutSeconds: 5
+            failureThreshold: 3
+            successThreshold: 1
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: kibana
+  namespace: lesson4356
+spec:
+  selector:
+    app: kibana
+  type: NodePort
+  ports:
+    - port      : 5601
+      targetPort: 5601
+      nodePort  : 32061

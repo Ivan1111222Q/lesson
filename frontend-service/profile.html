@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Профиль - Интернет-магазин</title>
+    <link rel="stylesheet" href="/css/style.css">
+    <style>
+        .order-card {
+            border: 1px solid #ccc;
+            padding: 15px;
+            margin-bottom: 15px;
+            border-radius: 8px;
+        }
+        .order-status {
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+        .status-controls {
+            margin-top: 10px;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Интернет-магазин</h1>
+            <nav>
+                <a href="/index.html">Каталог</a>
+                <a href="/cart.html">Корзина (<span id="cart-count">0</span>)</a>
+                <a href="/profile.html">Профиль</a>
+            </nav>
+            <div class="user-info"></div>
+        </div>
+    </header>
+
+    <div class="container">
+        <div id="auth-forms">
+            <h2>Вход в систему</h2>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="login-email">
+            </div>
+            <div class="form-group">
+                <label>Пароль:</label>
+                <input type="password" id="login-password">
+            </div>
+            <button onclick="login()">Войти</button>
+
+            <h2 style="margin-top: 30px;">Регистрация</h2>
+            <div class="form-group">
+                <label>Имя:</label>
+                <input type="text" id="register-name">
+            </div>
+            <div class="form-group">
+                <label>Email:</label>
+                <input type="email" id="register-email">
+            </div>
+            <div class="form-group">
+                <label>Пароль:</label>
+                <input type="password" id="register-password">
+            </div>
+            <button onclick="register()">Зарегистрироваться</button>
+        </div>
+
+        <div id="profile-info" class="hidden">
+            <h2>Мои заказы</h2>
+            <div id="orders-container"></div>
+        </div>
+    </div>
+
+    <script src="/js/api.js"></script>
+    <script src="/js/app.js"></script>
+    <script>
+        async function login() {
+            const email = document.getElementById('login-email').value;
+            const password = document.getElementById('login-password').value;
+
+            try {
+                const result = await UsersAPI.login({ email, password });
+                Storage.setToken(result.token);
+                Storage.setUser(result.user);
+                App.showSuccess('Вход выполнен успешно!');
+                showProfile();
+            } catch (error) {
+                App.showError(`Ошибка входа: ${error.message}`);
+            }
+        }
+
+        async function register() {
+            const name = document.getElementById('register-name').value;
+            const email = document.getElementById('register-email').value;
+            const password = document.getElementById('register-password').value;
+
+            try {
+                const result = await UsersAPI.register({ name, email, password });
+                Storage.setToken(result.token);
+                Storage.setUser(result.user);
+                App.showSuccess('Регистрация успешна!');
+                showProfile();
+            } catch (error) {
+                App.showError(`Ошибка регистрации: ${error.message}`);
+            }
+        }
+
+        async function showProfile() {
+            const user = Storage.getUser();
+            if (!user) {
+                document.getElementById('auth-forms').classList.remove('hidden');
+                document.getElementById('profile-info').classList.add('hidden');
+                return;
+            }
+
+            document.getElementById('auth-forms').classList.add('hidden');
+            document.getElementById('profile-info').classList.remove('hidden');
+            App.updateHeader();
+
+            await loadOrders();
+        }
+
+        async function loadOrders() {
+            const user = Storage.getUser();
+            const container = document.getElementById('orders-container');
+            App.showLoading(container);
+
+            try {
+                const orders = await OrdersAPI.getAll(user.id);
+
+                if (orders.length === 0) {
+                    container.innerHTML = '<p>У вас пока нет заказов</p>';
+                    return;
+                }
+
+                container.innerHTML = orders.map(order => {
+                    const statusText = {
+                        'pending': 'В обработке',
+                        'processing': 'Обрабатывается',
+                        'shipped': 'Отправлен',
+                        'delivered': 'Доставлен',
+                        'cancelled': 'Отменен'
+                    }[order.status] || order.status;
+                    
+                    const canCancel = order.status === 'pending' || order.status === 'processing';
+                    
+                    return `
+                    <div class="order-card" id="order-${order.id}">
+                        <h3>Заказ #${order.id}</h3>
+                        <div class="order-status status-${order.status}" id="status-${order.id}">Статус: ${statusText}</div>
+                        <p>Дата: ${App.formatDate(order.created_at)}</p>
+                        <p>Сумма: ${App.formatPrice(order.total)}</p>
+                        <p>Товаров: ${order.items.length}</p>
+                        ${canCancel ? `
+                            <div class="status-controls">
+                                <button onclick="cancelOrder(${order.id})" style="background-color: #e74c3c; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Отменить заказ</button>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+                }).join('');
+            } catch (error) {
+                container.innerHTML = `<p class="error">Ошибка загрузки заказов: ${error.message}</p>`;
+            }
+        }
+
+        async function cancelOrder(orderId) {
+            if (!confirm('Вы уверены, что хотите отменить этот заказ?')) {
+                return;
+            }
+
+            try {
+                const result = await OrdersAPI.cancel(orderId);
+                App.showSuccess(`Заказ #${orderId} успешно отменен. Товары возвращены на склад.`);
+                await loadOrders(); // Перезагружаем список заказов
+            } catch (error) {
+                App.showError(`Не удалось отменить заказ: ${error.message}`);
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            showProfile();
+        });
+    </script>
+</body>
+</html>
