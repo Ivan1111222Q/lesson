@@ -7,27 +7,22 @@
 
 serviceName: orders-service
 namespace: lesson4356
-
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
-  tag: "5.0"
-  pullPolicy: Always  # Всегда загружать новый образ (для разработки)
-
+  tag: "4fea54fb"
+  pullPolicy: Always # Всегда загружать новый образ (для разработки)
 replicaCount: 2
-
 service:
   type: NodePort
   port: 8002
   targetPort: 8002
   nodePort: 30002
-
 ports:
-- name: http-metrics      # ← Имя порта для ServiceMonitor
+- name: http-metrics # ← Имя порта для ServiceMonitor
   port: 8002
   targetPort: 8002
   protocol: TCP
-  nodePort: 30002  
-
+  nodePort: 30002
 config:
   PORT: "8002"
   LOG_LEVEL: "INFO"
@@ -37,32 +32,29 @@ config:
   USERS_SERVICE_URL: "http://users-service-service:8003"
   POSTGRES_HOST: "postgres"
   POSTGRES_PORT: "5432"
-
 # TODO: раскомментировать после создания secret.yaml
 secret:
   POSTGRES_USER: "user"
   POSTGRES_PASSWORD: "password"
   POSTGRES_DB: "reviews"
-
 strategy:
   canary:
     steps:
-      - setWeight: 20
-      - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: "{{ .Release.Name }}-success-rate-analysis"
-      - setWeight: 50
-      - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: "{{ .Release.Name }}-success-rate-analysis"
-      - setWeight: 80
-      - pause: { duration: 30s }
-      - analysis:
-          templates:
-            - templateName: "{{ .Release.Name }}-success-rate-analysis"
-
+    - setWeight: 20
+    - pause: {duration: 30s}
+    - analysis:
+        templates:
+        - templateName: "{{ .Release.Name }}-success-rate-analysis"
+    - setWeight: 50
+    - pause: {duration: 30s}
+    - analysis:
+        templates:
+        - templateName: "{{ .Release.Name }}-success-rate-analysis"
+    - setWeight: 80
+    - pause: {duration: 30s}
+    - analysis:
+        templates:
+        - templateName: "{{ .Release.Name }}-success-rate-analysis"
 # ============================================================================
 # ГЛОБАЛЬНЫЕ НАСТРОЙКИ
 # ============================================================================
@@ -73,27 +65,20 @@ strategy:
 analysis:
   # Включить/выключить создание AnalysisTemplate
   enabled: true
-
   # Адрес Prometheus сервера
   prometheusAddress: "http://kube-prometheus-stack-prometheus.lesson4356.svc.cluster.local:9090"
   # Порог успешности (0.99 = 99% запросов без 5xx ошибок)
   successThreshold: 0.99
-
   # Сколько провалов допускается перед rollback
   failureLimit: 3
-
   # Интервал между проверками
   interval: 30s
-
   # Количество проверок на каждом шаге canary
   # (3 проверки × 30s = 90 секунд анализа на каждом шаге)
   count: 3
-
-
 # =============================================================================
 # TODO: Добавить probes и resources после доработки rollout.yaml
 # =============================================================================
-
 resources:
   requests:
     memory: "256Mi"
@@ -101,7 +86,6 @@ resources:
   limits:
     memory: "512Mi"
     cpu: "1000m"
-
 livenessProbe:
   path: /live
   port: 8002
@@ -109,7 +93,6 @@ livenessProbe:
   periodSeconds: 5
   timeoutSeconds: 2
   failureThreshold: 3
-
 readinessProbe:
   path: /health
   port: 8002
