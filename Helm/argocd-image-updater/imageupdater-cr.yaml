@@ -16,6 +16,7 @@ spec:
     # Формат: git:secret:namespace/secret-name
     method: "git:secret:argo-cd/git-creds"
     gitConfig:
+      repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
       branch: argocd
       # Путь относительно source.path Application (Helm/python-service-chart)
       writeBackTarget: "helmvalues:../values/orders-service.yaml"
@@ -27,3 +28,7 @@ spec:
       images:
         - alias: orders
           imageName: cr.yandex/crpiqtsurn6alildl4cb/orders-service
+          manifestTargets:
+            helm:
+              name: image.repository
+              tag: image.tag
