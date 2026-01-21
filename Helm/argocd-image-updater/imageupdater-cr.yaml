@@ -6,40 +6,24 @@ metadata:
 spec:
   # Namespace, где находятся ArgoCD Applications
   namespace: argo-cd
-  
+
   # Глобальные настройки обновления
   commonUpdateSettings:
-    updateStrategy: newest-build  # Используем newest-build вместо latest (latest устарел)
-  
+    updateStrategy: newest-build
+
   # Настройки записи обратно (write-back)
   writeBackConfig:
-    method: argocd  # Используем ArgoCD API для обновления
-  
+    # Формат: git:secret:namespace/secret-name
+    method: "git:secret:argo-cd/git-creds"
+    gitConfig:
+      branch: argocd
+      # Путь относительно source.path Application (Helm/python-service-chart)
+      writeBackTarget: "helmvalues:../values/orders-service.yaml"
+
   # Список ссылок на Applications
   applicationRefs:
-    # Frontend service
-    - namePattern: frontend-service
-      images:
-        - alias: frontend
-          imageName: cr.yandex/crpiqtsurn6alildl4cb/frontend-service
-    # Orders service
+    # Orders service - используем Git write-back
     - namePattern: orders-service
       images:
         - alias: orders
           imageName: cr.yandex/crpiqtsurn6alildl4cb/orders-service
-    # Products service
-    - namePattern: products-service
-      images:
-        - alias: products
-          imageName: cr.yandex/crpiqtsurn6alildl4cb/products-service
-    # Reviews service
-    - namePattern: reviews-service
-      images:
-        - alias: reviews
-          imageName: cr.yandex/crpiqtsurn6alildl4cb/reviews-service
-    # Users service
-    - namePattern: users-service
-      images:
-        - alias: users
-          imageName: cr.yandex/crpiqtsurn6alildl4cb/users-service
-
