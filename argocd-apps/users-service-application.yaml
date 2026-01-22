@@ -8,10 +8,9 @@ metadata:
   name: users-service
   namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
   annotations:
-    argocd-image-updater.argoproj.io/image-list: users=cr.yandex/crpiqtsurn6alildl4cb/users-service
-    argocd-image-updater.argoproj.io/users.update-strategy: latest
-    argocd-image-updater.argoproj.io/users.allow-tags: "regexp:^.*$"
-    argocd-image-updater.argoproj.io/users.force-update: "false"
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: "helmvalues:../values/users-service.yaml"
   finalizers:
     - resources-finalizer.argocd.argoproj.io  # При удалении Application Argo CD подчистит созданные ресурсы
 spec:
