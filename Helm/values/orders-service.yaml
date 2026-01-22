@@ -13,12 +13,17 @@ image:
   tag: "1d31f1fa"
 =======
 <<<<<<< HEAD
+  tag: "1d31f1fa"
+=======
+<<<<<<< HEAD
   tag: "1fb792fb"
 =======
   tag: "373e9393"
 >>>>>>> gitlab/main
 >>>>>>> gitlab/main
+>>>>>>> gitlab/main
   pullPolicy: Always # Всегда загружать новый образ (для разработки)
+  
 replicaCount: 2
 service:
   type: NodePort
