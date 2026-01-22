@@ -9,7 +9,7 @@ serviceName: orders-service
 namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
-  tag: "373e9393"
+  tag: "0cc6974a"
   pullPolicy: Always # Всегда загружать новый образ (для разработки)
 replicaCount: 2
 service:
