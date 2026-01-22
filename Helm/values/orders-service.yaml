@@ -10,9 +10,13 @@ namespace: lesson4356
 image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
 <<<<<<< HEAD
+  tag: "1d31f1fa"
+=======
+<<<<<<< HEAD
   tag: "1fb792fb"
 =======
   tag: "373e9393"
+>>>>>>> gitlab/main
 >>>>>>> gitlab/main
   pullPolicy: Always # Всегда загружать новый образ (для разработки)
 replicaCount: 2
