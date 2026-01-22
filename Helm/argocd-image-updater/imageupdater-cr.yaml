@@ -19,8 +19,12 @@ spec:
       repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
       branch: main
       # Путь относительно source.path Application (Helm/python-service-chart)
+<<<<<<< HEAD
       # writeBackTarget: "helmvalues:../values/orders-service.yaml"
       
+=======
+      writeBackTarget: "helmvalues:../values/{{ .AppName }}.yaml"
+>>>>>>> gitlab/main
 
   # Список ссылок на Applications
   applicationRefs:
