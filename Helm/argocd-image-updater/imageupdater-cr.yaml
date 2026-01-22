@@ -17,7 +17,7 @@ spec:
     method: "git:secret:argo-cd/git-creds"
     gitConfig:
       repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
-      branch: argocd
+      branch: main
       # Путь относительно source.path Application (Helm/python-service-chart)
       writeBackTarget: "helmvalues:../values/orders-service.yaml"
 
