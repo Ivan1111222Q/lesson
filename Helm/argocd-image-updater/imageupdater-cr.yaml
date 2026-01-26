@@ -19,11 +19,7 @@ spec:
       repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
       branch: main
       # Путь относительно source.path Application (Helm/python-service-chart)
-
-      writeBackTarget: "helmvalues:../values/{{ .AppName }}"
-
-
-
+      writeBackTarget: "helmvalues:../values/{{ .AppName }}.yaml"
 
   # Список ссылок на Applications
   applicationRefs:
@@ -35,6 +31,4 @@ spec:
           manifestTargets:
             helm:
               name: image.repository
-              tag: image.tag    
-   
-   
+              tag: image.tag
