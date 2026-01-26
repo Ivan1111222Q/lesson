@@ -19,12 +19,11 @@ spec:
       repository: "git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git"
       branch: main
       # Путь относительно source.path Application (Helm/python-service-chart)
-<<<<<<< HEAD
-      # writeBackTarget: "helmvalues:../values/orders-service.yaml"
-      
-=======
-      writeBackTarget: "helmvalues:../values/{{ .AppName }}.yaml"
->>>>>>> gitlab/main
+
+      writeBackTarget: "helmvalues:../values/orders-service.yaml"
+
+
+
 
   # Список ссылок на Applications
   applicationRefs:
@@ -38,12 +37,4 @@ spec:
               name: image.repository
               tag: image.tag    
 
-    # Users service - используем Git write-back 
-    - namePattern: users-service
-      images:
-        - alias: users
-          imageName: cr.yandex/crpiqtsurn6alildl4cb/users-service
-          manifestTargets:
-            helm:
-              name: image.repository
-              tag: image.tag  
+   
