@@ -12,8 +12,8 @@ metadata:
 spec:
   project: default                 # Используем дефолтный проект (можно вынести в отдельный AppProject при необходимости)
   source:
-    repoURL: git@github.com:FerapontovAnton/lesson4356.git  # Git-репозиторий с chart'ом и values
-    targetRevision: argocd          # Следить за актуальной веткой (можно зафиксировать тег/branch)
+    repoURL: git@sonylabs.gitlab.yandexcloud.net:sonylabs/lesson4356.git  # Git-репозиторий с chart'ом и values
+    targetRevision: main          # Следить за актуальной веткой (можно зафиксировать тег/branch)
     path: Helm/eck-operator # Путь до Helm-чарта для python-сервисов
     helm:
       releaseName: eck-operator # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
