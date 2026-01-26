@@ -20,7 +20,7 @@ spec:
       branch: main
       # Путь относительно source.path Application (Helm/python-service-chart)
 
-      writeBackTarget: "helmvalues:../values/orders-service.yaml"
+      writeBackTarget: "helmvalues:../values/{{ .AppName }}"
 
 
 
@@ -36,5 +36,5 @@ spec:
             helm:
               name: image.repository
               tag: image.tag    
-
+   
    
