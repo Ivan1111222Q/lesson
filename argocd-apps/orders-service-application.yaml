@@ -7,13 +7,6 @@ kind: Application
 metadata:
   name: orders-service
   namespace: argo-cd                # Разворачиваем объект в namespace, где установлен Argo CD
-  annotations:
-    argocd-image-updater.argoproj.io/write-back-method: git
-    argocd-image-updater.argoproj.io/git-branch: main
-    argocd-image-updater.argoproj.io/write-back-target: "helmvalues:../values/orders-service.yaml"
-    
-    
-
 
     
   finalizers:
@@ -22,7 +15,7 @@ spec:
   project: default                 # Используем дефолтный проект (можно вынести в отдельный AppProject при необходимости)
   source:
     repoURL: git@github.com:FerapontovAnton/lesson4356.git  # Git-репозиторий с chart'ом и values
-    targetRevision: argocd          # Следить за актуальной веткой (можно зафиксировать тег/branch)
+    targetRevision: main          # Следить за актуальной веткой (можно зафиксировать тег/branch)
     path: Helm/python-service-chart # Путь до Helm-чарта для python-сервисов
     helm:
       releaseName: orders-service  # Имя релиза в Helm, чтобы лейблы/ресурсы были читаемыми
