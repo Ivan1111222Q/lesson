@@ -11,7 +11,7 @@ image:
   repository: cr.yandex/crpiqtsurn6alildl4cb/orders-service
   tag: "4fea54fb"
   pullPolicy: Always # Всегда загружать новый образ (для разработки)
-
+  
 replicaCount: 2
 service:
   type: NodePort
