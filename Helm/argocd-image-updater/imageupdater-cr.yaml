@@ -32,3 +32,15 @@ spec:
             helm:
               name: image.repository
               tag: image.tag
+
+    # Users service - используем Git write-back
+      - namePattern: users-service
+        images:
+          - alias: users
+            imageName: cr.yandex/crpiqtsurn6alildl4cb/users-service
+            manifestTargets:
+              helm:
+                name: image.repository
+                tag: image.tag
+
+      
