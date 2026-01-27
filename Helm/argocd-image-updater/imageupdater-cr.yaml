@@ -23,7 +23,7 @@ spec:
 
   # Список ссылок на Applications
   applicationRefs:
-    # Orders service - используем Git write-back
+    # Orders service
     - namePattern: orders-service
       images:
         - alias: orders
@@ -33,7 +33,7 @@ spec:
               name: image.repository
               tag: image.tag
 
-    # Users service - используем Git write-back
+    # Users service 
     - namePattern: users-service
       images:
         - alias: users
@@ -43,7 +43,7 @@ spec:
               name: image.repository
               tag: image.tag
     
-    # Products service - ДОБАВИТЬ
+    # Products service
     - namePattern: products-service
       images:
         - alias: products
@@ -53,3 +53,12 @@ spec:
               name: image.repository
               tag: image.tag
       
+    # Reviews service
+    - namePattern: reviews-service
+      images:
+        - alias: reviews
+          imageName: cr.yandex/crpiqtsurn6alildl4cb/reviews-service
+          manifestTargets:
+            helm:
+              name: image.repository
+              tag: image.tag
